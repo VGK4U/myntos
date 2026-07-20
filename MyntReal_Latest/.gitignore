@@ -111,3 +111,13 @@ database_exports/
 
 # Alembic noop SQLite (auto-created during provision)
 alembic_noop.db
+
+# Postgres local data directory
+postgres_data/
+
+# Local uploaded PDFs and run scripts
+backend/uploaded_pdf*.pdf
+run_local.sh
+.agents/
+mcp_config.json
+**/mcp_config.json

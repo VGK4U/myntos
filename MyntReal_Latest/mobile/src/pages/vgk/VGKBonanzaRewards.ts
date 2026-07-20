@@ -106,7 +106,7 @@ export class VGKBonanzaRewardsPage {
   private container: HTMLElement;
   private all: BonanzaItem[] = [];
   private rewardFiles: RewardFile[] = [];
-  private filter: FilterKey = 'all';
+  private filter: FilterKey = 'active';
   private loading = true;
   private error = '';
 

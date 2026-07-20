@@ -3436,7 +3436,37 @@
                 return _dnlSort.dir === 'asc' ? va - vb : vb - va;
             });
 
+            if (filtered.length === 0 && search) {
+                triggerBackendSearch(search);
+                return;
+            }
+            _dnlLastSearch = '';
             renderListTable(filtered);
+        }
+
+        let _dnlLastSearch = '';
+        async function triggerBackendSearch(search) {
+            if (search === _dnlLastSearch) return;
+            _dnlLastSearch = search;
+            
+            const w = document.getElementById('dnlListTableWrap');
+            if (w) w.innerHTML = '<div style="text-align:center;padding:30px;color:#6b7280"><i class="fas fa-spinner fa-spin me-1"></i>Searching all members…</div>';
+            
+            try {
+                const resp = await fetch(BASE + '/dashboard/member-search?q=' + encodeURIComponent(search), { headers: authHeaders() });
+                if (resp.status === 401) { logout(); return; }
+                const data = await resp.json();
+                if (!data.success) throw new Error();
+                
+                const results = (data.data || []).map(p => ({
+                    node: p,
+                    level: '—',
+                    isRoot: false
+                }));
+                renderListTable(results);
+            } catch(e) {
+                if (w) w.innerHTML = '<div class="alert alert-danger" style="margin:10px 0">Failed to search members globally.</div>';
+            }
         }
 
         function clearDnlFilter() {
@@ -3624,7 +3654,7 @@
                 const directCount = node.direct_count || (node.children ? node.children.length : 0);
                 const regDate = node.created_at ? fmtDate(node.created_at) : '—';
                 const actDate = node.vgk_activated_at ? fmtDate(node.vgk_activated_at) : '—';
-                const lvlLabel = level === 0 ? 'Root' : `L${level}`;
+                const lvlLabel = level === 0 ? 'Root' : (level === '—' ? '—' : `L${level}`);
                 const statusHtml = st.active
                     ? `<span style="background:#ede9fe;color:#4c1d95;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700">✓ Activated</span>`
                     : st.key === 'registered'

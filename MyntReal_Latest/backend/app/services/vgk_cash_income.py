@@ -151,7 +151,7 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
     _sps_gate = (getattr(lead, 'solar_pipeline_status', '') or '').lower()
     _is_solar = (category_id == 6) or bool(_sps_gate)
     if _is_solar:
-        _SOLAR_COMM_STAGES = {'completed'}
+        _SOLAR_COMM_STAGES = {'subsidy_pending', 'completed'}
         if _sps_gate not in _SOLAR_COMM_STAGES:
             logger.info(
                 f'[VGK-CI] DC-SOLAR-STAGE-GATE-001: Lead {lead.id} cat={category_id} '
@@ -487,13 +487,13 @@ def release_cash_income(db: Session, entry_id: int, company_id: int, released_by
         ).fetchone()
         if _lead_row and (_lead_row.category_id or 0) == 6:
             _sps_rel = (_lead_row.solar_pipeline_status or '').lower()
-            if _sps_rel != 'completed':
+            if _sps_rel not in ('subsidy_pending', 'completed'):
                 _stage_label = _sps_rel.replace('_', ' ').title() if _sps_rel else 'Not Set'
                 return {
                     'success': False,
                     'error': (
                         f'Solar final commission can only be released after the lead reaches '
-                        f'"Completed" stage. Current stage: {_stage_label}.'
+                        f'"Subsidy Pending" or "Completed" stage. Current stage: {_stage_label}.'
                     ),
                 }
 
@@ -1849,87 +1849,8 @@ def record_solar_advance_as_income_row(
     # firing on L2 would cascade one level too high and create a duplicate VSCC.
     # No date guard — applies to all advances (backfill via startup migration for older ones).
     # company_id uses the advance entry's company_id (4=MyntReal) so it shows on correct tab.
-    if getattr(advance_row, 'level', 1) != 1:
-        return {'success': True, 'income_entry_id': entry.id, 'entry_number': entry.entry_number}
-    try:
-        _upline = getattr(partner, 'parent_partner_id', None)
-        if _upline:
-            _senior = db.query(OfficialPartner).filter(OfficialPartner.id == _upline).first()
-            if _senior:
-                # Idempotency gate (DC-SENIOR-COMM-CHAIN-BUG-001):
-                # Skip VSCC if either:
-                #   (a) A SENIOR_COMM already exists for this (senior, lead), OR
-                #   (b) An L2 advance already exists in vgk_solar_cibil_advances for
-                #       this (lead, senior) — the L2 advance IS the senior's payment,
-                #       so creating a VSCC on top would double-pay the same person.
-                _already_sc = db.execute(text("""
-                    SELECT id FROM vgk_cash_income_entries
-                    WHERE partner_id    = :sid
-                      AND source_lead_id = :lid
-                      AND kind          = 'SENIOR_COMM'
-                    LIMIT 1
-                """), {'sid': _senior.id, 'lid': entry.source_lead_id}).fetchone()
-                _l2_advance_exists = db.execute(text("""
-                    SELECT id FROM vgk_solar_cibil_advances
-                    WHERE lead_id = :lid AND level = 2 AND partner_id = :sid
-                    LIMIT 1
-                """), {'lid': getattr(advance_row, 'lead_id', None), 'sid': _senior.id}).fetchone()
-                if not _already_sc and not _l2_advance_exists:
-                    _SC_GROSS = Decimal('500'); _SC_ADMIN = Decimal('40')
-                    _SC_TDS   = Decimal('10');  _SC_NET   = Decimal('450')
-                    _now = _get_ist()
-                    _sp  = db.execute(text("""
-                        SELECT id FROM vgk_cash_income_entries
-                        WHERE partner_id=:sid AND status='PENDING'
-                          AND kind='COMMISSION' AND level=2
-                        ORDER BY created_at DESC LIMIT 1
-                    """), {'sid': _senior.id}).fetchone()
-                    if _sp:
-                        db.execute(text("""
-                            UPDATE vgk_cash_income_entries
-                               SET commission_amount = GREATEST(0, commission_amount - 500),
-                                   admin_charges     = GREATEST(0, admin_charges     - 40),
-                                   tds_amount        = GREATEST(0, tds_amount        - 10),
-                                   net_payout        = GREATEST(0, net_payout        - 450),
-                                   updated_at        = :now
-                             WHERE id = :eid
-                        """), {'now': _now, 'eid': _sp.id})
-                    _ts  = _now.strftime('%y%m')
-                    # DC-VSCC-SEQLOCK-001: Use MAX+1 (not COUNT+1) to handle gaps from
-                    # cancelled/deleted entries, and advisory lock to prevent races.
-                    _vscc_lock = int(f'8{_ts}')
-                    db.execute(text("SELECT pg_advisory_xact_lock(:k)"), {'k': _vscc_lock})
-                    _seq = db.execute(text(
-                        "SELECT COALESCE(MAX(CAST(SPLIT_PART(entry_number, '-', 3) AS INTEGER)), 0) + 1 "
-                        "FROM vgk_cash_income_entries "
-                        "WHERE kind='SENIOR_COMM' AND entry_number ~ :pat"
-                    ), {'pat': f'^VSCC-{_ts}-[0-9]{{1,6}}$'}).scalar() or 1
-                    _sc  = VGKCashIncomeEntry(
-                        company_id=company_id,
-                        entry_number=f'VSCC-{_ts}-{int(_seq):04d}',
-                        partner_id=_senior.id,
-                        source_lead_id=entry.source_lead_id,
-                        category_id=None, level=2,
-                        deal_value_total=0, deal_value_excl_tax=0, commission_pct=0,
-                        commission_amount=_SC_GROSS, admin_charges=_SC_ADMIN,
-                        tds_amount=_SC_TDS, net_payout=_SC_NET,
-                        points_debit_required=0, points_actually_debited=0,
-                        kind='SENIOR_COMM', status='PENDING',
-                        confirmed_by_id=released_by_id, confirmed_at=_now,
-                        notes=(
-                            f'DC-SENIOR-COMM-001: ₹500 advance incentive — junior '
-                            f'{partner.partner_code} advance {entry.entry_number} released'
-                        ),
-                        created_at=_now, updated_at=_now,
-                    )
-                    db.add(_sc)
-                    logger.info(
-                        f'[DC-SENIOR-COMM-001] VSCC-{_ts}-{int(_seq):04d} '
-                        f'created for senior #{_senior.id}'
-                    )
-    except Exception as _sc_err:
-        logger.warning(f'[DC-SENIOR-COMM-001] trigger failed (non-fatal): {_sc_err}')
-
+    # DC-SENIOR-COMM-001-REMOVED (Jul 2026): Auto-creation of SENIOR_COMM (VSCC) on advance release
+    # was causing a create->cancel->create loop. Removed auto-trigger entirely.
     return {'success': True, 'income_entry_id': entry.id, 'entry_number': entry.entry_number}
 
 

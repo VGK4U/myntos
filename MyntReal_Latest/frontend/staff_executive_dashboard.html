@@ -311,6 +311,7 @@ th[data-sk]:hover{background:#eef2f7!important}
     <div class="kpi-row" id="kpiRow">
       <div class="kpi-card"><div class="kpi-label">Total Leads</div><div class="kpi-value" id="kpiTotal">—</div></div>
       <div class="kpi-card won"><div class="kpi-label">Won</div><div class="kpi-value" id="kpiWon">—</div><div class="kpi-sub" id="kpiWonPct"></div></div>
+      <div class="kpi-card" style="border-left:3px solid #2563eb"><div class="kpi-label">Pipeline</div><div class="kpi-value" id="kpiPipeline" style="color:#2563eb">—</div><div class="kpi-sub" id="kpiPipeVal" style="color:#2563eb"></div></div>
       <div class="kpi-card wpct"><div class="kpi-label">Win Rate</div><div class="kpi-value" id="kpiWinRate">—</div></div>
       <div class="kpi-card prog"><div class="kpi-label">In Progress</div><div class="kpi-value" id="kpiProgress">—</div></div>
       <div class="kpi-card lost"><div class="kpi-label">Lost</div><div class="kpi-value" id="kpiLost">—</div></div>
@@ -690,10 +691,10 @@ function buildParams(){
 }
 
 function setLoading(){
-  ['kpiTotal','kpiWon','kpiWinRate','kpiProgress','kpiLost','kpiDealTotal','kpiAvg'].forEach(id=>{
+  ['kpiTotal','kpiWon','kpiPipeline','kpiWinRate','kpiProgress','kpiLost','kpiDealTotal','kpiAvg'].forEach(id=>{
     const e=document.getElementById(id);if(e)e.textContent='—';
   });
-  ['kpiWonPct','kpiDealWon'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='';});
+  ['kpiWonPct','kpiPipeVal','kpiDealWon'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='';});
   ['dashByStatus','dashByCategory','dashBySource','dashByTelecaller','dashByFieldStaff','dashMonthly','dashWeekly'].forEach(id=>{
     const e=document.getElementById(id);
     if(e)e.innerHTML='<div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
@@ -885,6 +886,8 @@ function renderKPIs(data){
   const wonPct=total>0?((s.won_leads/total)*100).toFixed(1):'0';
   document.getElementById('kpiTotal').textContent    =fmtNum(total);
   document.getElementById('kpiWon').textContent      =fmtNum(s.won_leads||0);
+  if(document.getElementById('kpiPipeline')) document.getElementById('kpiPipeline').textContent = fmtNum(s.pipeline_leads||0);
+  if(document.getElementById('kpiPipeVal'))  document.getElementById('kpiPipeVal').textContent  = s.pipeline_deal_value>0?'₹'+fmtVal(s.pipeline_deal_value):'';
   document.getElementById('kpiWonPct').textContent   =total>0?`${wonPct}% of total`:'';
   document.getElementById('kpiWinRate').textContent  =`${wonPct}%`;
   document.getElementById('kpiProgress').textContent =fmtNum(s.in_progress_leads||0);
@@ -1389,99 +1392,198 @@ function renderStagewiseTable(){
   });
 }
 
+function renderVsPrevBadge(curr, prev) {
+  if (prev === undefined || prev === null) return '<span style="color:#9ca3af;font-size:10px">—</span>';
+  const delta = curr - prev;
+  if (delta === 0) return '<span style="color:#9ca3af;font-size:10px">—</span>';
+  const col = delta > 0 ? '#10b981' : '#ef4444';
+  const sign = delta > 0 ? '+' : '';
+  const bg = delta > 0 ? '#ecfdf5' : '#fef2f2';
+  return `<span style="font-size:10px;font-weight:700;color:${col};background:${bg};padding:1px 4px;border-radius:3px">${sign}${delta}</span>`;
+}
+
 function renderTrendTable(containerId, rows){
   const el=document.getElementById(containerId);
   if(!el)return;
   if(!rows||!rows.length){el.innerHTML='<div class="dash-empty">No trend data</div>';return;}
-  const maxT=Math.max(1,...rows.map(r=>r.total));
-  const trTot=rows.reduce((s,r)=>s+r.total,0);
-  const trWon=rows.reduce((s,r)=>s+r.won,0);
-  const trDv=rows.reduce((s,r)=>s+(r.deal_value||0),0);
-  const trWinRcv=rows.reduce((s,r)=>s+(r.win_received||0),0);
-  const trComp=rows.reduce((s,r)=>s+(r.completed||0),0);
-  const trFdv=rows.reduce((s,r)=>s+(r.final_deal_value||0),0);
-  const trCompRcv=rows.reduce((s,r)=>s+(r.completed_received||0),0);
-  const trWinPct=trTot>0?((trWon/trTot)*100).toFixed(1):'0';
-  const trCompWonPct=trWon>0?((trComp/trWon)*100).toFixed(1):'0';
+
+  // Calculate totals
+  const trTot = rows.reduce((s,r)=>s+(r.total||0), 0);
+  const trWon = rows.reduce((s,r)=>s+(r.won||0), 0);
+  const trSub = rows.reduce((s,r)=>s+(r.submitted||0), 0);
+  const trSubVal = rows.reduce((s,r)=>s+(r.submitted_value||0), 0);
+  const trPipe = rows.reduce((s,r)=>s+(r.pipeline||0), 0);
+  const trPipeVal = rows.reduce((s,r)=>s+(r.pipeline_value||0), 0);
+  const trAtBank = rows.reduce((s,r)=>s+(r.at_bank||0), 0);
+  const trEbChange = rows.reduce((s,r)=>s+(r.eb_change||0), 0);
+  const trInst = rows.reduce((s,r)=>s+(r.installed||0), 0);
+  const trComp = rows.reduce((s,r)=>s+(r.completed||0), 0);
+  const trCompVal = rows.reduce((s,r)=>s+(r.comp_value||0), 0);
+  const trInProg = rows.reduce((s,r)=>s+(r.in_progress||0), 0);
+  const trInstPend = rows.reduce((s,r)=>s+(r.inst_pending||0), 0);
+  const trBalPend = rows.reduce((s,r)=>s+(r.bal_pending||0), 0);
+  const trInProgVal = rows.reduce((s,r)=>s+(r.inprog_value||0), 0);
+
+  const trSubWonPct = trWon>0 ? ((trSub/trWon)*100).toFixed(1) : '0.0';
+  const trPipeSubPct = trSub>0 ? ((trPipe/trSub)*100).toFixed(1) : '0.0';
+  const trCompSubPct = trSub>0 ? ((trComp/trSub)*100).toFixed(1) : '0.0';
+
   const trtotStyle='background:#1e3a5f;color:white;border-bottom:2px solid #0f2744';
-  const trtotCell='text-align:center;padding:5px 6px;font-weight:700;font-size:11px;white-space:nowrap';
+  const trtotCell='text-align:center;padding:6px 5px;font-weight:700;font-size:11px;white-space:nowrap;border:1px solid #1e3b68';
   const trtotRow=`<tr style="${trtotStyle}">
-    <td style="text-align:left;font-weight:800;white-space:nowrap;font-size:11px;padding:5px 7px">TOTAL</td>
+    <td style="text-align:left;font-weight:800;white-space:nowrap;font-size:11px;padding:6px 8px;border:1px solid #1e3b68">TOTAL</td>
     <td style="${trtotCell}">${fmtNum(trTot)}</td>
-    <td style="${trtotCell}">${fmtNum(trWon)}</td>
-    <td style="${trtotCell}">${trWinPct}%</td>
-    <td style="${trtotCell}">${trDv>0?'₹'+fmtVal(trDv):'—'}</td>
-    <td style="${trtotCell}">${trWinRcv>0?'₹'+fmtVal(trWinRcv):'—'}</td>
-    <td style="${trtotCell}">—</td>
-    <td style="${trtotCell}">${trComp>0?fmtNum(trComp):'—'}</td>
-    <td style="${trtotCell}">${trComp>0&&trWon>0?trCompWonPct+'%':'—'}</td>
-    <td style="${trtotCell}">${trFdv>0?'₹'+fmtVal(trFdv):'—'}</td>
-    <td style="${trtotCell}">${trCompRcv>0?'₹'+fmtVal(trCompRcv):'—'}</td>
-    <td style="${trtotCell}">—</td>
-    <td class="trend-bar-cell"></td>
+    
+    <!-- WON VS SUBMITTED TOTALS -->
+    <td style="${trtotCell};background:#0f5132;color:#d1e7dd">${fmtNum(trWon)}</td>
+    <td style="${trtotCell};background:#0f5132;color:#d1e7dd">${fmtNum(trSub)}</td>
+    <td style="${trtotCell};background:#0f5132;color:#d1e7dd">${trSubWonPct}%</td>
+    <td style="${trtotCell};background:#0f5132;color:#d1e7dd">${trSubVal>0?'₹'+fmtVal(trSubVal):'—'}</td>
+    <td style="${trtotCell};background:#0f5132;color:#d1e7dd">—</td>
+    
+    <!-- PIPELINE TOTALS -->
+    <td style="${trtotCell};background:#084298;color:#cfe2ff">${fmtNum(trPipe)}</td>
+    <td style="${trtotCell};background:#084298;color:#cfe2ff">${trPipeSubPct}%</td>
+    <td style="${trtotCell};background:#084298;color:#cfe2ff">${trPipeVal>0?'₹'+fmtVal(trPipeVal):'—'}</td>
+    <td style="${trtotCell};background:#084298;color:#cfe2ff">—</td>
+    <td style="${trtotCell};background:#084298;color:#cfe2ff">${fmtNum(trAtBank)}</td>
+    <td style="${trtotCell};background:#084298;color:#cfe2ff">${fmtNum(trEbChange)}</td>
+    
+    <!-- COMPLETED TOTALS -->
+    <td style="${trtotCell};background:#432874;color:#e8def8">${fmtNum(trInst)}</td>
+    <td style="${trtotCell};background:#432874;color:#e8def8">${fmtNum(trComp)}</td>
+    <td style="${trtotCell};background:#432874;color:#e8def8">${trCompSubPct}%</td>
+    <td style="${trtotCell};background:#432874;color:#e8def8">${trCompVal>0?'₹'+fmtVal(trCompVal):'—'}</td>
+    <td style="${trtotCell};background:#432874;color:#e8def8">—</td>
+    
+    <!-- IN PROGRESS TOTALS -->
+    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${fmtNum(trInProg)}</td>
+    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${fmtNum(trInstPend)}</td>
+    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${fmtNum(trBalPend)}</td>
+    <td style="${trtotCell};background:#7c2d12;color:#ffedd5">${trInProgVal>0?'₹'+fmtVal(trInProgVal):'—'}</td>
   </tr>`;
-  el.innerHTML=`<table class="trend-table">
-    <thead><tr>
-      <th style="text-align:left">Period</th>
-      <th>Total Leads</th>
-      <th>Won</th>
-      <th>Win%</th>
-      <th style="color:#1d4ed8;white-space:nowrap">Win Value</th>
-      <th style="color:#2563eb;white-space:nowrap">Win Rcvd</th>
-      <th style="white-space:nowrap;color:#6366f1">vs Prev</th>
-      <th style="color:#0d9488">Completed</th>
-      <th style="color:#0d9488;white-space:nowrap">Comp/Won%</th>
-      <th style="color:#0d9488;white-space:nowrap">Comp Value</th>
-      <th style="color:#0891b2;white-space:nowrap">Comp Rcvd</th>
-      <th style="white-space:nowrap;color:#6366f1">vs Prev</th>
-      <th class="trend-bar-cell">Progress</th>
-    </tr></thead>
-    <tbody>
-    ${trtotRow}
-    ${rows.map((r,i)=>{
-      const wp=r.total>0?((r.won/r.total)*100).toFixed(1):'0';
-      const pct=(r.total/maxT*100).toFixed(1);
-      const wonPct=r.total>0?(r.won/r.total*100).toFixed(1):0;
-      const comp=r.completed||0;
-      const fdv=r.final_deal_value||0;
-      const winRcv=r.win_received||0;
-      const compRcv=r.completed_received||0;
-      const compWonPct=r.won>0?((comp/r.won)*100).toFixed(1):'0';
-      const prevR=rows[i+1];
-      const curDv=r.deal_value||0;
-      const prevDv=prevR?(prevR.deal_value||0):null;
-      let vsPrevCell='<span style="color:#d1d5db;font-size:10px">—</span>';
-      if(prevDv!==null&&(curDv>0||prevDv>0)){
-        const delta=curDv-prevDv;
-        const col=delta>0?'#059669':delta<0?'#ef4444':'#6b7280';
-        const sign=delta>0?'+':delta<0?'-':'';
-        vsPrevCell=delta===0?'<span style="color:#6b7280;font-size:10px">—</span>':`<span style="font-size:10px;font-weight:700;color:${col}">${sign}₹${fmtVal(Math.abs(delta))}</span>`;
-      }
-      return `<tr>
-        <td style="text-align:left;font-weight:600;white-space:nowrap;font-size:11px">${esc(r.label)}</td>
-        <td><span class="badge-total">${fmtNum(r.total)}</span></td>
-        <td><span class="badge-won">${fmtNum(r.won)}</span></td>
-        <td style="font-size:10.5px;color:#7c3aed;font-weight:700">${wp}%</td>
-        <td style="white-space:nowrap">${curDv>0?`<span class="badge-dv">₹${fmtVal(curDv)}</span>`:'—'}</td>
-        <td style="white-space:nowrap;text-align:center">${winRcv>0?`<span style="font-size:10.5px;font-weight:600;color:#2563eb">₹${fmtVal(winRcv)}</span>`:'—'}</td>
-        <td style="text-align:center">${vsPrevCell}</td>
-        <td style="text-align:center"><span style="font-weight:700;color:#0d9488;font-size:11px">${comp>0?fmtNum(comp):'—'}</span></td>
-        <td style="text-align:center"><span style="font-weight:600;color:#0d9488;font-size:10.5px">${comp>0&&r.won>0?compWonPct+'%':'—'}</span></td>
-        <td style="white-space:nowrap">${fdv>0?'<span style="font-weight:600;color:#0d9488;font-size:10.5px">₹'+fmtVal(fdv)+'</span>':'—'}</td>
-        <td style="white-space:nowrap;text-align:center">${compRcv>0?`<span style="font-size:10.5px;font-weight:600;color:#0891b2">₹${fmtVal(compRcv)}</span>`:'—'}</td>
-        <td style="text-align:center">${(()=>{const prevFdv=prevR?(prevR.final_deal_value||0):null;if(prevFdv===null||(fdv===0&&prevFdv===0))return'<span style="color:#d1d5db;font-size:10px">—</span>';const d=fdv-prevFdv;if(d===0)return'<span style="color:#6b7280;font-size:10px">—</span>';const col=d>0?'#059669':'#ef4444';const s=d>0?'+':'-';return`<span style="font-size:10px;font-weight:700;color:${col}">${s}₹${fmtVal(Math.abs(d))}</span>`;})()}</td>
-        <td class="trend-bar-cell">
-          <div class="t-bar-wrap">
-            <div style="display:flex;height:100%">
-              <div class="t-bar-won" style="width:${wonPct}%"></div>
-              <div class="t-bar-fill" style="width:${Math.max(0,pct-wonPct)}%"></div>
-            </div>
-          </div>
-        </td>
-      </tr>`;
-    }).join('')}
-    </tbody>
-  </table>`;
+
+  el.innerHTML=`
+  <div style="overflow-x:auto; width:100%">
+    <table class="trend-table" style="border: 1px solid #cbd5e1; width:100%; border-collapse:collapse; font-size:10.5px">
+      <thead>
+        <tr style="background:#f8fafc">
+          <th rowspan="2" style="text-align:left;vertical-align:middle;padding:6px 8px;border:1px solid #cbd5e1;font-weight:700">Period</th>
+          <th rowspan="2" style="text-align:center;vertical-align:middle;padding:6px 5px;border:1px solid #cbd5e1;font-weight:700">Overall Leads</th>
+          <th colspan="5" style="text-align:center;background:rgba(16, 185, 129, 0.08);color:#047857;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">WON VS SUBMITTED</th>
+          <th colspan="6" style="text-align:center;background:rgba(59, 130, 246, 0.08);color:#1d4ed8;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">PIPELINE</th>
+          <th colspan="5" style="text-align:center;background:rgba(99, 102, 241, 0.08);color:#4f46e5;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">COMPLETED</th>
+          <th colspan="4" style="text-align:center;background:rgba(249, 115, 22, 0.08);color:#c2410c;font-size:9.5px;font-weight:800;border:1px solid #cbd5e1;letter-spacing:0.5px">IN PROGRESS</th>
+        </tr>
+        <tr style="background:#f8fafc">
+          <!-- WON VS SUBMITTED columns -->
+          <th style="color:#10b981;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">WON<br>(STATUS)</th>
+          <th style="color:#059669;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">SUBMITTED<br>(STAGE)</th>
+          <th style="color:#8b5cf6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">SUB/WON<br>%</th>
+          <th style="color:#10b981;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">SUB<br>VALUE</th>
+          <th style="color:#3b82f6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">VS<br>PREV</th>
+
+          <!-- PIPELINE columns -->
+          <th style="color:#2563eb;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">PIPELINE<br>(EXCL. DEAD)</th>
+          <th style="color:#8b5cf6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">PIPE/SUB<br>%</th>
+          <th style="color:#2563eb;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">PIPE<br>VALUE</th>
+          <th style="color:#3b82f6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">VS<br>PREV</th>
+          <th style="color:#1d4ed8;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">AT<br>BANK</th>
+          <th style="color:#1d4ed8;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">EB<br>CHANGE</th>
+
+          <!-- COMPLETED columns -->
+          <th style="color:#6366f1;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">INSTALLED<br>(BY INST. DATE)</th>
+          <th style="color:#4f46e5;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">COMPLETED</th>
+          <th style="color:#8b5cf6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">COMP/<br>SUB%</th>
+          <th style="color:#6366f1;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">COMP<br>VALUE</th>
+          <th style="color:#3b82f6;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">VS<br>PREV</th>
+
+          <!-- IN PROGRESS columns -->
+          <th style="color:#f97316;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">IN PROGRESS<br>(INST→SUBSIDY)</th>
+          <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">INST.<br>PENDING</th>
+          <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">BAL.<br>PENDING</th>
+          <th style="color:#ea580c;font-size:8.5px;font-weight:700;padding:4px 3px;border:1px solid #cbd5e1">INPROG<br>VALUE</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${trtotRow}
+        ${rows.map((r,i)=>{
+          const won = r.won || 0;
+          const sub = r.submitted || 0;
+          const subVal = r.submitted_value || 0;
+          const pipe = r.pipeline || 0;
+          const pipeVal = r.pipeline_value || 0;
+          const atBank = r.at_bank || 0;
+          const ebChange = r.eb_change || 0;
+          const inst = r.installed || 0;
+          const comp = r.completed || 0;
+          const compVal = r.comp_value || 0;
+          const inProg = r.in_progress || 0;
+          const instPend = r.inst_pending || 0;
+          const balPend = r.bal_pending || 0;
+          const inProgVal = r.inprog_value || 0;
+
+          const subWonPct = won > 0 ? ((sub / won) * 100).toFixed(1) : '—';
+          const pipeSubPct = sub > 0 ? ((pipe / sub) * 100).toFixed(1) : '—';
+          const compSubPct = sub > 0 ? ((comp / sub) * 100).toFixed(1) : '—';
+
+          const prevR = rows[i+1];
+          const subVsPrev = prevR ? renderVsPrevBadge(sub, prevR.submitted) : '<span style="color:#9ca3af;font-size:10px">—</span>';
+          const pipeVsPrev = prevR ? renderVsPrevBadge(pipe, prevR.pipeline) : '<span style="color:#9ca3af;font-size:10px">—</span>';
+          const compVsPrev = prevR ? renderVsPrevBadge(comp, prevR.completed) : '<span style="color:#9ca3af;font-size:10px">—</span>';
+
+          const cellStyle = 'padding: 5px; border: 1px solid #cbd5e1; vertical-align: middle; text-align: center;';
+          const zebra = i % 2 === 0 ? '' : 'style="background:#fdfdfd"';
+
+          const pt = containerId === 'dashMonthly' ? 'monthly' : 'weekly';
+          const clickFn = (metric, colName, val) => {
+            if (!val || val <= 0) return '—';
+            return `<span style="cursor:pointer; text-decoration:underline; text-decoration-color:rgba(0,0,0,0.2)" onclick="openTrendDrillDown('${pt}', '${esc(r.label)}', '${metric}', '${colName}')">${fmtNum(val)}</span>`;
+          };
+          const clickValFn = (metric, colName, val) => {
+            if (!val || val <= 0) return '—';
+            return `<span style="cursor:pointer; text-decoration:underline; text-decoration-color:rgba(0,0,0,0.2); white-space:nowrap" onclick="openTrendDrillDown('${pt}', '${esc(r.label)}', '${metric}', '${colName}')">₹${fmtVal(val)}</span>`;
+          };
+
+          return `<tr ${zebra} class="trend-row-hover">
+            <td style="text-align:left; font-weight:600; white-space:nowrap; padding: 5px 8px; border: 1px solid #cbd5e1;">${esc(r.label)}</td>
+            <td style="${cellStyle}">${clickFn('total', 'Overall Leads', r.total)}</td>
+            
+            <!-- WON VS SUBMITTED -->
+            <td style="${cellStyle} font-weight:700; color:#10b981">${clickFn('won', 'Won (Status)', won)}</td>
+            <td style="${cellStyle} font-weight:700; color:#059669">${clickFn('submitted', 'Submitted (Stage)', sub)}</td>
+            <td style="${cellStyle} font-weight:700; color:#7c3aed">${subWonPct !== '—' ? subWonPct + '%' : '—'}</td>
+            <td style="${cellStyle} font-weight:700; color:#10b981; white-space:nowrap">${clickValFn('submitted', 'Submitted Value', subVal)}</td>
+            <td style="${cellStyle}">${subVsPrev}</td>
+
+            <!-- PIPELINE -->
+            <td style="${cellStyle} font-weight:700; color:#2563eb">${clickFn('pipeline', 'Pipeline (Excl. Dead)', pipe)}</td>
+            <td style="${cellStyle} font-weight:700; color:#7c3aed">${pipeSubPct !== '—' ? pipeSubPct + '%' : '—'}</td>
+            <td style="${cellStyle} font-weight:700; color:#2563eb; white-space:nowrap">${clickValFn('pipeline', 'Pipeline Value', pipeVal)}</td>
+            <td style="${cellStyle}">${pipeVsPrev}</td>
+            <td style="${cellStyle} font-weight:600; color:#1d4ed8">${clickFn('at_bank', 'At Bank', atBank)}</td>
+            <td style="${cellStyle} font-weight:600; color:#1d4ed8">${clickFn('eb_change', 'EB Change', ebChange)}</td>
+
+            <!-- COMPLETED -->
+            <td style="${cellStyle} font-weight:700; color:#6366f1">${clickFn('installed', 'Installed (By Inst. Date)', inst)}</td>
+            <td style="${cellStyle} font-weight:700; color:#4f46e5">${clickFn('completed', 'Completed', comp)}</td>
+            <td style="${cellStyle} font-weight:700; color:#7c3aed">${compSubPct !== '—' ? compSubPct + '%' : '—'}</td>
+            <td style="${cellStyle} font-weight:700; color:#6366f1; white-space:nowrap">${clickValFn('completed', 'Completed Value', compVal)}</td>
+            <td style="${cellStyle}">${compVsPrev}</td>
+
+            <!-- IN PROGRESS -->
+            <td style="${cellStyle} font-weight:700; color:#f97316">${clickFn('in_progress', 'In Progress (Inst->Subsidy)', inProg)}</td>
+            <td style="${cellStyle} font-weight:600; color:#ea580c">${clickFn('inst_pending', 'Installation Pending', instPend)}</td>
+            <td style="${cellStyle} font-weight:600; color:#ea580c">${clickFn('bal_pending', 'Balance Pending', balPend)}</td>
+            <td style="${cellStyle} font-weight:700; color:#f97316; white-space:nowrap">${clickValFn('in_progress', 'In Progress Value', inProgVal)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>
+  <style>
+    .trend-row-hover:hover { background-color: #f1f5f9 !important; }
+  </style>`;
 }
 
 function renderTrends(data){
@@ -1545,42 +1647,138 @@ function _edUpdateSortUI(){
     else{ic.textContent=' ⇅';ic.style.color='#9ca3af';}
   });
 }
-function _edRenderLeads(leads){
-  const body=document.getElementById('edLeadListBody');
-  if(!body) return;
-  if(!leads.length){
-    body.innerHTML='<tr><td colspan="13" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
-    _edUpdateSortUI(); return;
+
+let _edIsTrendDrillDown = false;
+
+function _edRenderLeadsTrend(leads) {
+  const table = document.getElementById('edModalTable');
+  if (!table) return;
+
+  const theadHtml = `
+    <tr style="background:#f8fafc">
+      <th style="padding:6px 6px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:center;border-bottom:1px solid #e5e7eb;white-space:nowrap">#</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Lead Name</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Contact</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Lead Date</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">1st Pmt Date</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Install Date</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center">Days</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#0891b2;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Solar Stage</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#059669;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Bank</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#047857;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Branch</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#b91c1c;text-transform:uppercase;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap">Bal Pending</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Source</th>
+    </tr>
+  `;
+
+  let tbodyHtml = '';
+  if (!leads.length) {
+    tbodyHtml = '<tr><td colspan="12" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
+  } else {
+    tbodyHtml = leads.map((l, i) => {
+      const days = _edComputeDays(l);
+      const daysCell = days === null ? `<td style="text-align:center;padding:5px 6px;font-size:10px;color:#d1d5db">—</td>` : (() => {
+        const col = days <= 7 ? '#059669' : days <= 30 ? '#d97706' : days <= 60 ? '#ea580c' : '#dc2626';
+        const bg = days <= 7 ? '#f0fdf4' : days <= 30 ? '#fffbeb' : days <= 60 ? '#fff7ed' : '#fef2f2';
+        return `<td style="text-align:center;padding:5px 6px;white-space:nowrap"><span style="display:inline-block;min-width:32px;padding:2px 7px;border-radius:10px;background:${bg};color:${col};font-size:11px;font-weight:700">${days}</span></td>`;
+      })();
+
+      const phoneDisplay = l.phone_raw || l.phone || '—';
+      const solarStageLabel = l.solar_pipeline_status ? (_SOL_LABEL[l.solar_pipeline_status] || l.solar_pipeline_status) : '—';
+      const balPend = (l.balance_pending || (l.deal_value_total - (l.deal_value_received||0))) > 0 ? '₹' + fmtVal(l.balance_pending || (l.deal_value_total - (l.deal_value_received||0))) : '—';
+
+      return `
+        <tr class="ed-lead-row" style="cursor:pointer" onclick="_edSelectLead(${l.id},${l.company_id},'${esc(l.name)}','${esc(l.phone_raw||'')}',this)">
+          <td style="text-align:center;font-size:10px;color:#9ca3af;padding:5px 6px">${i+1}</td>
+          <td style="font-weight:600;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 6px">${esc(l.name)}</td>
+          <td style="font-size:10.5px;padding:5px 6px;white-space:nowrap"><a href="tel:${esc(l.phone_raw||'')}" style="color:#2563eb;text-decoration:none;font-weight:600">${esc(phoneDisplay)}</a></td>
+          <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.created_at)}</td>
+          <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.first_payment_received_date)}</td>
+          <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.installation_date)}</td>
+          ${daysCell}
+          <td style="font-size:10px;color:#0891b2;white-space:nowrap;padding:5px 6px">${esc(solarStageLabel)}</td>
+          <td style="font-size:10px;color:#059669;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.loan_bank || '—')}</td>
+          <td style="font-size:10px;color:#047857;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.bank_branch || '—')}</td>
+          <td style="font-size:10px;font-weight:600;color:#b91c1c;white-space:nowrap;text-align:right;padding:5px 6px">${balPend}</td>
+          <td style="font-size:10px;color:#475569;white-space:nowrap;padding:5px 6px">${esc(l.source || '—')}</td>
+        </tr>
+      `;
+    }).join('');
   }
-  body.innerHTML=leads.map((l,i)=>{
-    const stCol=_STATUS_COL[l.status]||'#6b7280';
-    const solLbl=l.solar_pipeline_status?(_SOL_LABEL[l.solar_pipeline_status]||l.solar_pipeline_status):'—';
-    const dv=l.deal_value_total>0?'₹'+fmtVal(l.deal_value_total):'—';
-    const latNote=l.latest_note?`<span title="${esc(l.latest_note.note||'')}" style="font-size:10px;color:#6b7280;max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle">${esc((l.latest_note.note||'').substring(0,60)+(l.latest_note.note&&l.latest_note.note.length>60?'…':''))}</span>`:'<span style="color:#d1d5db;font-size:10px">—</span>';
-    const days=_edComputeDays(l);
-    const daysCell=days===null?`<td style="text-align:center;padding:5px 6px;font-size:10px;color:#d1d5db">—</td>`:(()=>{
-      const col=days<=7?'#059669':days<=30?'#d97706':days<=60?'#ea580c':'#dc2626';
-      const bg=days<=7?'#f0fdf4':days<=30?'#fffbeb':days<=60?'#fff7ed':'#fef2f2';
-      return `<td style="text-align:center;padding:5px 6px;white-space:nowrap" title="Days since Submit Date"><span style="display:inline-block;min-width:32px;padding:2px 7px;border-radius:10px;background:${bg};color:${col};font-size:11px;font-weight:700">${days}d</span></td>`;
-    })();
-    return `<tr class="ed-lead-row" style="cursor:pointer" onclick="_edSelectLead(${l.id},${l.company_id},'${esc(l.name)}','${esc(l.phone_raw||'')}',this)">
-      <td style="text-align:center;font-size:10px;color:#9ca3af;padding:5px 6px">${i+1}</td>
-      <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.created_at)}</td>
-      <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.submit_date)}</td>
-      ${daysCell}
-      <td style="font-weight:600;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 6px">${esc(l.name)}</td>
-      <td style="font-size:10.5px;font-family:monospace;padding:5px 6px">${esc(l.phone_raw||l.phone||'—')}</td>
-      <td style="padding:5px 6px"><span style="font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:8px;background:${stCol}22;color:${stCol};white-space:nowrap">${esc(l.status)}</span></td>
-      <td style="font-size:10px;color:#0891b2;white-space:nowrap;padding:5px 6px">${esc(solLbl)}</td>
-      <td style="font-size:10px;color:#059669;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.loan_bank||'—')}</td>
-      <td style="font-size:10px;color:#047857;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.bank_branch||'—')}</td>
-      <td style="font-size:10px;color:#7c3aed;white-space:nowrap;padding:5px 6px;max-width:100px;overflow:hidden;text-overflow:ellipsis">${esc(l.brand_name||'—')}</td>
-      <td style="font-size:10px;font-weight:600;color:#1d4ed8;white-space:nowrap;text-align:right;padding:5px 6px">${dv}</td>
-      <td style="max-width:180px;padding:5px 6px">${latNote}</td>
-    </tr>`;
-  }).join('');
+
+  table.innerHTML = `<thead>${theadHtml}</thead><tbody id="edLeadListBody">${tbodyHtml}</tbody>`;
+}
+
+function _edRenderLeadsHandler(leads) {
+  const table = document.getElementById('edModalTable');
+  if (!table) return;
+
+  const theadHtml = `
+    <tr style="background:#f8fafc">
+      <th style="padding:6px 6px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:center;border-bottom:1px solid #e5e7eb;white-space:nowrap">#</th>
+      <th data-sk="created_at" onclick="_edSortLeads('created_at')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Date of Lead<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="submit_date" onclick="_edSortLeads('submit_date')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Submit Date<span class="ed-si" style="color:#1e3a5f"> ▼</span></th>
+      <th data-sk="_days" onclick="_edSortLeads('_days')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center">Days<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="name" onclick="_edSortLeads('name')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Name<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Phone</th>
+      <th data-sk="status" onclick="_edSortLeads('status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Status<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="solar_pipeline_status" onclick="_edSortLeads('solar_pipeline_status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#0891b2;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Solar Stage<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="loan_bank" onclick="_edSortLeads('loan_bank')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#059669;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Bank<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#047857;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Branch</th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Brand</th>
+      <th data-sk="deal_value_total" onclick="_edSortLeads('deal_value_total')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#1d4ed8;text-transform:uppercase;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap">Deal Value<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Latest Note</th>
+    </tr>
+  `;
+
+  let tbodyHtml = '';
+  if (!leads.length) {
+    tbodyHtml = '<tr><td colspan="13" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
+  } else {
+    tbodyHtml = leads.map((l, i) => {
+      const stCol = _STATUS_COL[l.status] || '#6b7280';
+      const solLbl = l.solar_pipeline_status ? (_SOL_LABEL[l.solar_pipeline_status] || l.solar_pipeline_status) : '—';
+      const dv = l.deal_value_total > 0 ? '₹' + fmtVal(l.deal_value_total) : '—';
+      const latNote = l.latest_note ? `<span title="${esc(l.latest_note.note||'')}" style="font-size:10px;color:#6b7280;max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle">${esc((l.latest_note.note||'').substring(0,60)+(l.latest_note.note&&l.latest_note.note.length>60?'…':''))}</span>` : '<span style="color:#d1d5db;font-size:10px">—</span>';
+      const days = _edComputeDays(l);
+      const daysCell = days === null ? `<td style="text-align:center;padding:5px 6px;font-size:10px;color:#d1d5db">—</td>` : (() => {
+        const col = days <= 7 ? '#059669' : days <= 30 ? '#d97706' : days <= 60 ? '#ea580c' : '#dc2626';
+        const bg = days <= 7 ? '#f0fdf4' : days <= 30 ? '#fffbeb' : days <= 60 ? '#fff7ed' : '#fef2f2';
+        return `<td style="text-align:center;padding:5px 6px;white-space:nowrap" title="Days since Submit Date"><span style="display:inline-block;min-width:32px;padding:2px 7px;border-radius:10px;background:${bg};color:${col};font-size:11px;font-weight:700">${days}d</span></td>`;
+      })();
+
+      return `
+        <tr class="ed-lead-row" style="cursor:pointer" onclick="_edSelectLead(${l.id},${l.company_id},'${esc(l.name)}','${esc(l.phone_raw||'')}',this)">
+          <td style="text-align:center;font-size:10px;color:#9ca3af;padding:5px 6px">${i+1}</td>
+          <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.created_at)}</td>
+          <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.submit_date)}</td>
+          ${daysCell}
+          <td style="font-weight:600;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 6px">${esc(l.name)}</td>
+          <td style="font-size:10.5px;font-family:monospace;padding:5px 6px">${esc(l.phone_raw||l.phone||'—')}</td>
+          <td style="padding:5px 6px"><span style="font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:8px;background:${stCol}22;color:${stCol};white-space:nowrap">${esc(l.status)}</span></td>
+          <td style="font-size:10px;color:#0891b2;white-space:nowrap;padding:5px 6px">${esc(solLbl)}</td>
+          <td style="font-size:10px;color:#059669;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.loan_bank || '—')}</td>
+          <td style="font-size:10px;color:#047857;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.bank_branch || '—')}</td>
+          <td style="font-size:10px;color:#7c3aed;white-space:nowrap;padding:5px 6px;max-width:100px;overflow:hidden;text-overflow:ellipsis">${esc(l.brand_name || '—')}</td>
+          <td style="font-size:10px;font-weight:600;color:#1d4ed8;white-space:nowrap;text-align:right;padding:5px 6px">${dv}</td>
+          <td style="max-width:180px;padding:5px 6px">${latNote}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  table.innerHTML = `<thead>${theadHtml}</thead><tbody id="edLeadListBody">${tbodyHtml}</tbody>`;
   _edUpdateSortUI();
 }
+
+function _edRenderLeads(leads){
+  if (_edIsTrendDrillDown) {
+    _edRenderLeadsTrend(leads);
+  } else {
+    _edRenderLeadsHandler(leads);
+  }
+}
+
 function _edSortLeads(col){
   if(_edSortBy===col) _edSortDir=_edSortDir==='asc'?'desc':'asc';
   else{_edSortBy=col;_edSortDir='asc';}
@@ -1599,6 +1797,7 @@ function _edSortLeads(col){
   });
   _edRenderLeads(_edLeadsData);
 }
+
 function _edToggleFullscreen(){
   const ov=document.getElementById('edOverlay');
   const ic=document.getElementById('edFsIcon');
@@ -1606,7 +1805,9 @@ function _edToggleFullscreen(){
   ov.classList.toggle('ed-fs');
   if(ic) ic.className=ov.classList.contains('ed-fs')?'fas fa-compress':'fas fa-expand';
 }
+
 async function openExecDrillDown(tr){
+  _edIsTrendDrillDown = false;
   const htype=tr.dataset.htype, hkey=tr.dataset.hkey, hname=tr.dataset.hname, hext=tr.dataset.hext;
   if(!htype||!hkey) return;
   const ov=document.getElementById('edOverlay');
@@ -1641,6 +1842,82 @@ async function openExecDrillDown(tr){
     body.innerHTML=`<tr><td colspan="13" style="text-align:center;padding:20px;color:#dc2626"><i class="fas fa-exclamation-circle me-1"></i>${esc(e.message)}</td></tr>`;
   }
 }
+
+async function openTrendDrillDown(periodType, label, metric, columnName) {
+  _edIsTrendDrillDown = true;
+  const ov=document.getElementById('edOverlay');
+  const title=document.getElementById('edModalTitle');
+  const body=document.getElementById('edLeadListBody');
+  const cnt=document.getElementById('edLeadCount');
+  const panel=document.getElementById('edDetailPanel');
+  if(!ov) return;
+
+  title.textContent = `${columnName} — ${label}`;
+  body.innerHTML='<tr><td colspan="12" style="text-align:center;padding:20px;color:#6b7280"><i class="fas fa-spinner fa-spin me-1"></i>Loading leads…</td></tr>';
+  cnt.textContent='';
+  if(panel) panel.style.display='none';
+  _edCurrentLead=null;
+  _edLeadsData=[]; _edSortBy='submit_date'; _edSortDir='desc';
+  ov.style.display='flex';
+
+  const base=buildParams();
+  const p=new URLSearchParams(base);
+  p.set('period_type', periodType);
+  p.set('label', label);
+  p.set('metric', metric);
+
+  try{
+    const r=await staffFetch(`/api/v1/crm/exec-trend-leads?${p.toString()}`);
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.detail||`HTTP ${r.status}`);}
+    const d=await r.json();
+    _edLeadsData=d.data||[];
+    const total=d.total||0;
+
+    let extraPill = '';
+    if (periodType === 'monthly') {
+      try {
+        const parts = label.split(' ');
+        const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const mIdx = monthNames.indexOf(parts[0]);
+        const year = parseInt(parts[1]);
+        if (mIdx !== -1 && !isNaN(year)) {
+          const start = new Date(year, mIdx, 1);
+          const today = new Date();
+          const diffTime = Math.abs(today - start);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          extraPill = `<span style="display:inline-block; background:rgba(30,58,95,0.08); color:#1e3a5f; padding:2px 8px; border-radius:12px; font-weight:600; font-size:11px; margin-right:8px"><i class="fas fa-calendar-alt me-1"></i>${diffDays} days since period start</span>`;
+        }
+      } catch(e) {}
+    } else if (periodType === 'weekly') {
+      try {
+        // Parse WX (DD MMM) -> e.g. "W12 (20 Jul)"
+        const parts = label.match(/\((\d+)\s+(\w+)\)/);
+        if (parts) {
+          const day = parseInt(parts[1]);
+          const monStr = parts[2];
+          const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          const mIdx = monthNames.indexOf(monStr);
+          if (mIdx !== -1 && !isNaN(day)) {
+            const year = new Date().getFullYear(); // assume current year
+            const start = new Date(year, mIdx, day);
+            const today = new Date();
+            const diffTime = Math.abs(today - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            extraPill = `<span style="display:inline-block; background:rgba(30,58,95,0.08); color:#1e3a5f; padding:2px 8px; border-radius:12px; font-weight:600; font-size:11px; margin-right:8px"><i class="fas fa-calendar-week me-1"></i>${diffDays} days since period start</span>`;
+          }
+        }
+      } catch(e) {}
+    }
+    
+    cnt.innerHTML = `${extraPill}<span style="display:inline-block; background:rgba(16,185,129,0.08); color:#10b981; padding:2px 8px; border-radius:12px; font-weight:600; font-size:11px"><i class="fas fa-users me-1"></i>${total} lead${total!==1?'s':''}</span>`;
+    
+    _edLeadsData.sort((a,b)=>{const va=a.submit_date||a.created_at||'';const vb=b.submit_date||b.created_at||'';return vb.localeCompare(va);});
+    _edRenderLeads(_edLeadsData);
+  }catch(e){
+    body.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:20px;color:#dc2626"><i class="fas fa-exclamation-circle me-1"></i>${esc(e.message)}</td></tr>`;
+  }
+}
+
 
 function closeExecDrillDown(){
   const ov=document.getElementById('edOverlay');
@@ -1740,9 +2017,9 @@ async function _edToggleCallHist(){
 
 <!-- DC-EXEC-DRILLDOWN-001: Handler Lead Drill-Down Modal -->
 <div id="edOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9500;align-items:flex-start;justify-content:center;padding:12px;overflow-y:auto" onclick="if(event.target===this)closeExecDrillDown()">
-  <div id="edModal" style="background:#fff;border-radius:14px;width:100%;max-width:1100px;margin:auto;display:flex;flex-direction:column;box-shadow:0 16px 60px rgba(0,0,0,.28);min-height:400px;max-height:calc(100vh - 24px)">
-    <!-- Header -->
-    <div style="background:linear-gradient(135deg,#1e3a5f,#0f2440);border-radius:14px 14px 0 0;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+  <div id="edModal" style="background:#fff;border-radius:14px;width:100%;max-width:1100px;margin:auto;display:flex;flex-direction:column;box-shadow:0 16px 60px rgba(0,0,0,.28);min-height:400px;max-height:calc(100vh - 24px);resize:both;overflow:auto;position:relative">
+    <!-- Header (Draggable) -->
+    <div id="edModalHeader" style="background:linear-gradient(135deg,#1e3a5f,#0f2440);border-radius:14px 14px 0 0;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;cursor:move">
       <div>
         <div style="color:#fff;font-weight:800;font-size:14px"><i class="fas fa-list me-2"></i><span id="edModalTitle">Leads</span></div>
         <div id="edLeadCount" style="font-size:10.5px;color:rgba(255,255,255,.7);margin-top:2px"></div>
@@ -1792,5 +2069,39 @@ async function _edToggleCallHist(){
     </div>
   </div>
 </div>
+
+<script>
+// Make modal header draggable
+(function(){
+  const modal = document.getElementById('edModal');
+  const header = document.getElementById('edModalHeader');
+  if(!modal || !header) return;
+  let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+  header.onmousedown = dragMouseDown;
+  function dragMouseDown(e) {
+    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'I') return;
+    e.preventDefault();
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    document.onmouseup = closeDragElement;
+    document.onmousemove = elementDrag;
+  }
+  function elementDrag(e) {
+    e.preventDefault();
+    pos1 = pos3 - e.clientX;
+    pos2 = pos4 - e.clientY;
+    pos3 = e.clientX;
+    pos4 = e.clientY;
+    modal.style.top = (modal.offsetTop - pos2) + "px";
+    modal.style.left = (modal.offsetLeft - pos1) + "px";
+    modal.style.position = "absolute";
+  }
+  function closeDragElement() {
+    document.onmouseup = null;
+    document.onmousemove = null;
+  }
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

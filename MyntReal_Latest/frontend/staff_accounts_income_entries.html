@@ -292,6 +292,7 @@
             <button class="tab-btn" data-tab="estimations" onclick="switchTab('estimations')" style="color:#b45309;"><i class="fas fa-calculator me-1"></i>Estimations</button>
             <button class="tab-btn" data-tab="solarvendor" onclick="switchTab('solarvendor')" style="color:#0369a1;"><i class="fas fa-solar-panel me-1"></i>Solar Vendor Ledger</button>
             <button class="tab-btn" data-tab="execDash" onclick="switchTab('execDash')" style="color:#7c3aed;"><i class="fas fa-chart-pie me-1"></i>Executive Dashboard</button>
+            <button class="tab-btn" data-tab="deleted" onclick="switchTab('deleted')" style="color:#dc2626;"><i class="fas fa-trash-alt me-1"></i>Deleted Transactions</button>
         </div>
 
         <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
@@ -304,6 +305,7 @@
         <div id="tab-location" class="tab-content"></div>
         <div id="tab-solarvendor" class="tab-content"></div>
         <div id="tab-execDash" class="tab-content"></div>
+        <div id="tab-deleted" class="tab-content"></div>
         <div id="tab-estimations" class="tab-content">
             <div class="est-sub-nav">
                 <button class="est-sub-btn active" data-esttab="in" onclick="switchEstSubTab('in')"><i class="fas fa-arrow-down me-1" style="color:#059669;"></i>IN Estimates</button>
@@ -461,8 +463,10 @@
 
         function canDeleteEntries() {
             if (!currentUserData) return false;
-            const role = (currentUserData.emp_role_code || currentUserData.role_code || '').toLowerCase();
-            return role === 'vgk4u' || role === 'ea' || role === 'executive_assistant';
+            const empCode = (currentUserData.emp_code || currentUserData.employee_code || '').toUpperCase().trim();
+            const role = (currentUserData.emp_role_code || currentUserData.role_code || (currentUserData.role ? currentUserData.role.role_code : '') || '').toLowerCase().trim();
+            const allowed = new Set(['vgk4u', 'ea', 'executive_assistant', 'accounts', 'accounts_staff', 'accounts_manager']);
+            return empCode === 'MR10001' || allowed.has(role);
         }
 
         document.addEventListener('DOMContentLoaded', async function() {
@@ -472,7 +476,7 @@
             document.getElementById('formDate').valueAsDate = new Date();
             try {
                 const meR = await staffFetch('/api/v1/staff/auth/me');
-                if (meR.ok) currentUserData = await meR.json();
+                if (meR.ok) { const _meRes = await meR.json(); currentUserData = _meRes.data || _meRes; }
             } catch(e) {}
             await Promise.all([loadCompanies(), loadSourceTypes(), loadFilterCategories('')]);
             await loadIncomes();
@@ -659,7 +663,42 @@
             document.getElementById(`tab-${tab}`).classList.add('active');
             if (tab === 'solarvendor') { renderSolarVendorLedger(); return; }
             if (tab === 'execDash') { renderExecutiveDashboard(); return; }
+            if (tab === 'deleted') { renderDeletedTab(); return; }
             renderAll();
+        }
+
+        async function renderDeletedTab() {
+            const el = document.getElementById('tab-deleted');
+            el.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+            try {
+                const r = await staffFetch(API_BASE + '/income-entries/deleted');
+                const data = await r.json();
+                const entries = data.income_entries || [];
+                if (!entries.length) {
+                    el.innerHTML = '<div class="empty-state"><i class="fas fa-trash-restore"></i><h3>No Deleted Income Entries</h3><p>Deleted transactions will appear here for audit history.</p></div>';
+                    return;
+                }
+                let html = `<div class="table-responsive card"><table class="custom-table">
+                    <thead><tr>
+                        <th>Entry #</th><th>Date</th><th>Customer / Payer</th><th>Amount (₹)</th><th>Company</th><th>Mode</th><th>Deleted By</th><th>Deleted At</th>
+                    </tr></thead><tbody>`;
+                entries.forEach(e => {
+                    html += `<tr>
+                        <td><strong>${esc(e.entry_number)}</strong></td>
+                        <td>${e.income_date ? fmtDateShort(e.income_date) : '—'}</td>
+                        <td>${esc(e.payer_name || e.lead_name || '—')}</td>
+                        <td><strong>₹${fmt(e.amount)}</strong></td>
+                        <td>${esc(e.company_name || '—')}</td>
+                        <td>${esc(e.payment_mode || '—')}</td>
+                        <td>${esc(e.deleted_by_name || '—')} ${e.deleted_by_emp_code ? '(' + esc(e.deleted_by_emp_code) + ')' : ''}</td>
+                        <td>${e.deleted_at ? fmtDateShort(e.deleted_at) : '—'}</td>
+                    </tr>`;
+                });
+                html += `</tbody></table></div>`;
+                el.innerHTML = html;
+            } catch(err) {
+                el.innerHTML = '<div class="alert alert-danger" style="margin:20px">Error loading deleted transactions</div>';
+            }
         }
 
         // Returns filteredIncomes excluding ESTIMATED unless user explicitly filters by ESTIMATED
@@ -2335,7 +2374,8 @@
 
                 document.getElementById('editEntryNum').textContent = entry.entry_number || id;
                 document.getElementById('editAmount').textContent = fmt(entry.amount);
-                document.getElementById('editDate').textContent = fmtD(entry.income_date);
+                const editDtEl = document.getElementById('editIncomeDate');
+                if (editDtEl) editDtEl.value = entry.income_date ? entry.income_date.slice(0,10) : '';
                 document.getElementById('editPayMode').textContent = entry.payment_mode || '-';
                 document.getElementById('editStatus').textContent = entry.status || '-';
 
@@ -2422,6 +2462,8 @@
             if (destType === 'EMPLOYEE' && !destEmpId) { alert('Please select an employee'); return; }
 
             const payload = {};
+            const editDt = document.getElementById('editIncomeDate')?.value;
+            if (editDt) payload.income_date = editDt;
             if (destType !== null) { payload.destination_type = destType || null; }
             if (destCompId !== null) payload.destination_company_id = destCompId;
             if (destEmpId !== null) payload.destination_employee_id = destEmpId;
@@ -2646,7 +2688,7 @@
                 <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:14px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                     <div><div style="font-size:10px;color:#6b7280;font-weight:600;">ENTRY #</div><div style="font-weight:700;color:#1f2937;" id="editEntryNum"></div></div>
                     <div><div style="font-size:10px;color:#6b7280;font-weight:600;">AMOUNT</div><div style="font-weight:700;color:#059669;" id="editAmount"></div></div>
-                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">DATE</div><div style="font-size:13px;" id="editDate"></div></div>
+                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">INCOME DATE</div><input type="date" id="editIncomeDate" style="font-size:12px;padding:2px 6px;border:1px solid #d1d5db;border-radius:4px;width:100%;"></div>
                     <div><div style="font-size:10px;color:#6b7280;font-weight:600;">MODE</div><div style="font-size:13px;" id="editPayMode"></div></div>
                     <div><div style="font-size:10px;color:#6b7280;font-weight:600;">STATUS</div><div style="font-size:13px;" id="editStatus"></div></div>
                 </div>

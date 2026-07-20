@@ -14,7 +14,7 @@ Answer B for insufficient points: income still credited, points debit = 0 (waive
 """
 
 from sqlalchemy import (
-    Column, Integer, String, Numeric, Boolean, DateTime, Text,
+    Column, Integer, String, Numeric, Boolean, DateTime, Date, Text,
     ForeignKey, Index, UniqueConstraint, CheckConstraint, SmallInteger, text
 )
 from app.models.base import Base, BaseModel, get_indian_time
@@ -37,6 +37,7 @@ class VGKCashIncomeEntry(BaseModel):
     category_id            = Column(Integer, ForeignKey('signup_categories.id', ondelete='SET NULL'), nullable=True)
 
     level                  = Column(SmallInteger, nullable=False)
+    income_date            = Column(Date, nullable=True)
 
     deal_value_total       = Column(Numeric(15, 2), nullable=False, default=0)
     deal_value_excl_tax    = Column(Numeric(15, 2), nullable=False, default=0)
@@ -142,6 +143,7 @@ class VGKCashIncomeEntry(BaseModel):
             'cancelled_reason':        self.cancelled_reason,
             'adjustment_ref_entry_id': self.adjustment_ref_entry_id,
             'adjustment_reason':       self.adjustment_reason,
+            'income_date':             self.income_date.isoformat() if hasattr(self.income_date, 'isoformat') and self.income_date else (str(self.income_date) if self.income_date else None),
             'created_at':              self.created_at.isoformat() if self.created_at else None,
             'updated_at':              self.updated_at.isoformat() if self.updated_at else None,
         }

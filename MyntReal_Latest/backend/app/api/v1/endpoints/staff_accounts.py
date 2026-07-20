@@ -4481,6 +4481,27 @@ async def delete_solar_vendor_ledger_entry(
         return handle_accounts_error(e)
 
 
+@router.get("/income-entries/deleted")
+async def list_deleted_income_entries(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=500, description="Items per page"),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """List deleted income entries for audit trail."""
+    try:
+        entries, total = IncomeEntryService.list_deleted_income_entries(db, current_user, page, page_size)
+        return JSONResponse(content={
+            "success": True,
+            "income_entries": entries,
+            "total": total,
+            "page": page,
+            "page_size": page_size
+        })
+    except Exception as e:
+        return handle_accounts_error(e)
+
+
 @router.delete("/income-entries/{entry_id}")
 async def delete_income_entry(
     entry_id: int,

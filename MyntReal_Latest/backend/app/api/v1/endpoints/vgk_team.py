@@ -3748,6 +3748,7 @@ def vgk_executive_dashboard(
 
     total_leads     = sum(lead_by_status.values())
     won_leads       = lead_by_status.get('won', 0)
+    pipeline_leads  = sum(v for k, v in lead_by_status.items() if k in ('won', 'order_placed', 'dispatched', 'delivered', 'installed') and k not in ('completed', 'cancelled', 'lost'))
     completed_leads = lead_by_status.get('completed', 0)
     lost_leads      = lead_by_status.get('lost', 0) + lead_by_status.get('cancelled', 0)
     active_leads    = sum(v for k, v in lead_by_status.items()
@@ -3863,6 +3864,7 @@ def vgk_executive_dashboard(
                 "new_this_month":     int(new_in_period),
                 "total_leads":        total_leads,
                 "won_leads":          won_leads,
+                "pipeline_leads":     pipeline_leads,
                 "completed_leads":    completed_leads,
                 "active_leads":       active_leads,
                 "lost_leads":         lost_leads,
@@ -4221,14 +4223,14 @@ def member_income_entries_detail(
             _vsca_params["vsca_st"] = _status_val
         # DC-IE-DATE-FILTER-001: apply same date range to VSCA rows
         if date_from:
-            _vsca_status_clause += " AND a.created_at::date >= CAST(:vsca_date_from AS DATE)"
+            _vsca_status_clause += " AND COALESCE(a.released_at::date, a.created_at::date) >= CAST(:vsca_date_from AS DATE)"
             _vsca_params["vsca_date_from"] = date_from
         if date_to:
-            _vsca_status_clause += " AND a.created_at::date <= CAST(:vsca_date_to AS DATE)"
+            _vsca_status_clause += " AND COALESCE(a.released_at::date, a.created_at::date) <= CAST(:vsca_date_to AS DATE)"
             _vsca_params["vsca_date_to"] = date_to
         vsca_rows = db.execute(text(
             "SELECT a.id, a.entry_number, a.status, a.kind, a.level, "
-            "  a.created_at::date::text AS entry_date, "
+            "  COALESCE(a.released_at::date, a.created_at::date)::text AS entry_date, "
             "  0::float                AS commission_pct, "
             "  a.advance_amount::float AS commission_amount, "
             "  (a.advance_amount * 0.08)::float AS admin_charges, "
@@ -4386,12 +4388,13 @@ def lead_earnings_dashboard(
                 cl.category_id,
                 COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED'), 0)::float          AS gross_earned,
                 COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status IN ('RELEASED','PAID')), 0)::float  AS received,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.level = 0), 0)::float AS l0_bonus,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.level IN (1,6)), 0)::float AS l1_source,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.level = 2), 0)::float AS l2_senior,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.level = 3), 0)::float AS l3_extended,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.level = 4), 0)::float AS l4_core,
-                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.level = 5), 0)::float AS l5_support,
+                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 0), 0)::float AS l0_bonus,
+                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level IN (1,6)), 0)::float AS l1_source,
+                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 2), 0)::float AS l2_senior,
+                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 3), 0)::float AS l3_extended,
+                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 4), 0)::float AS l4_core,
+                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.kind != 'EXTRA_COMMISSION' AND e.level = 5), 0)::float AS l5_support,
+                COALESCE(SUM(e.commission_amount) FILTER (WHERE e.status != 'CANCELLED' AND e.kind = 'EXTRA_COMMISSION'), 0)::float AS ec_bonus,
                 COUNT(*)            FILTER (WHERE e.status != 'CANCELLED')::integer AS total_files,
                 COUNT(DISTINCT e.partner_id) FILTER (WHERE e.status != 'CANCELLED')::integer AS member_count
             FROM vgk_cash_income_entries e
@@ -4456,6 +4459,7 @@ def lead_earnings_dashboard(
             "l3_extended":      float(r.l3_extended),
             "l4_core":          float(r.l4_core),
             "l5_support":       float(r.l5_support),
+            "ec_bonus":         float(r.ec_bonus),
             "gross_earned":     float(r.gross_earned),
             "received":         float(r.received),
             "income_by_status": status_map.get(int(r.source_lead_id), {}),

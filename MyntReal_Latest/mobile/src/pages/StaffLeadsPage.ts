@@ -53,6 +53,8 @@ interface Lead {
   z_guru_name?: string | null;
   submit_date?: string | null;  // DC-SUBMIT-DATE-001
   complete_date?: string | null;  // DC-COMPLETE-DATE-001
+  first_payment_received_date?: string | null;
+  electricity_bill_change?: boolean | string | null;
   solar_pipeline_status?: string | null;
   solar_brand_id?: number | null;
   solar_brand_name?: string | null;

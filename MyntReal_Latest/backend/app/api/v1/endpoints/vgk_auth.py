@@ -777,7 +777,11 @@ def vgk_my_network(
         })
         current = parent
 
+    _node_count = 0
+    _cap_reached = False
+
     def build_down(p: OfficialPartner, depth: int) -> dict:
+        nonlocal _node_count, _cap_reached
         # [DC-REFERRAL] Include referrer (parent) data for team referral columns
         parent_code = None
         if p.parent_partner_id:
@@ -793,6 +797,11 @@ def vgk_my_network(
             "parent_partner_code": parent_code,
             "children": []
         }
+        _node_count += 1
+        if _node_count >= 200:
+            _cap_reached = True
+            return node
+
         direct_count = db.query(OfficialPartner).filter(
             OfficialPartner.parent_partner_id == p.id,
             OfficialPartner.category == 'VGK_TEAM'
@@ -802,8 +811,12 @@ def vgk_my_network(
             kids = db.query(OfficialPartner).filter(
                 OfficialPartner.parent_partner_id == p.id,
                 OfficialPartner.category == 'VGK_TEAM'
-            ).order_by(OfficialPartner.id).all()
-            node["children"] = [build_down(k, depth - 1) for k in kids]
+            ).order_by(OfficialPartner.id).limit(50).all()
+            for k in kids:
+                if _node_count >= 200:
+                    _cap_reached = True
+                    break
+                node["children"].append(build_down(k, depth - 1))
         return node
 
     downline = build_down(current_member, depth=3)
@@ -826,7 +839,7 @@ def vgk_my_network(
     except Exception as _rre:
         logger.warning(f"[DC-REFERRAL] Referral rewards summary failed: {_rre}")
 
-    return {"success": True, "data": {"upline": upline, "downline": downline, "referral_rewards": referral_rewards}}
+    return {"success": True, "data": {"upline": upline, "downline": downline, "referral_rewards": referral_rewards, "truncated": _cap_reached}}
 
 
 @router.get("/dashboard/member-network/{partner_code}")
@@ -852,7 +865,11 @@ def vgk_member_network_view(
         if parent:
             upline_info = {"partner_code": parent.partner_code, "partner_name": parent.partner_name}
 
+    _node_count = 0
+    _cap_reached = False
+
     def build_down_member(p: OfficialPartner, depth: int) -> dict:
+        nonlocal _node_count, _cap_reached
         node = {
             "id": p.id, "partner_code": p.partner_code, "partner_name": p.partner_name,
             "is_active": p.is_active, "is_paid_activation": p.is_paid_activation,
@@ -862,6 +879,11 @@ def vgk_member_network_view(
             "created_at": p.created_at.isoformat() if p.created_at else None,
             "children": []
         }
+        _node_count += 1
+        if _node_count >= 200:
+            _cap_reached = True
+            return node
+
         direct_count = db.query(OfficialPartner).filter(
             OfficialPartner.parent_partner_id == p.id,
             OfficialPartner.category == 'VGK_TEAM'
@@ -871,8 +893,12 @@ def vgk_member_network_view(
             kids = db.query(OfficialPartner).filter(
                 OfficialPartner.parent_partner_id == p.id,
                 OfficialPartner.category == 'VGK_TEAM'
-            ).order_by(OfficialPartner.id).all()
-            node["children"] = [build_down_member(k, depth - 1) for k in kids]
+            ).order_by(OfficialPartner.id).limit(50).all()
+            for k in kids:
+                if _node_count >= 200:
+                    _cap_reached = True
+                    break
+                node["children"].append(build_down_member(k, depth - 1))
         return node
 
     downline = build_down_member(target, depth=3)
@@ -891,7 +917,38 @@ def vgk_member_network_view(
             "created_at": target.created_at.isoformat() if target.created_at else None,
             "upline": upline_info,
             "downline": downline,
+            "truncated": _cap_reached
         }
+    }
+
+
+@router.get("/dashboard/member-search")
+def vgk_member_search(
+    q: str,
+    current_member: OfficialPartner = Depends(get_current_vgk_member),
+    db: Session = Depends(get_db)
+):
+    """DC-VGK-SEARCH-001: Search all VGK_TEAM members by code or name."""
+    st = f"%{q.strip().lower()}%"
+    results = db.query(OfficialPartner).filter(
+        OfficialPartner.category == 'VGK_TEAM',
+        or_(
+            OfficialPartner.partner_code.ilike(st),
+            OfficialPartner.partner_name.ilike(st)
+        )
+    ).limit(50).all()
+    
+    return {
+        "success": True,
+        "data": [{
+            "id": p.id,
+            "partner_code": p.partner_code,
+            "partner_name": p.partner_name,
+            "is_active": p.is_active,
+            "vgk_points_balance": float(p.vgk_points_balance or 0),
+            "vgk_activated_at": p.vgk_activated_at.isoformat() if p.vgk_activated_at else None,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+        } for p in results]
     }
 
 

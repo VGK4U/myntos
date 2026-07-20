@@ -49,7 +49,7 @@ TWILIO_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
 TWILIO_FROM  = os.environ.get("TWILIO_PHONE_NUMBER", "")
 OPENAI_KEY   = os.environ.get("OPENAI_API_KEY", "")
 
-AI_AUDIO_DIR = "/tmp/ai_audio"
+AI_AUDIO_DIR = os.environ.get("AI_AUDIO_DIR", "/tmp/ai_audio")
 os.makedirs(AI_AUDIO_DIR, exist_ok=True)
 
 # ── Engagement filler phrases (spoken while GPT is thinking) ──────────────────

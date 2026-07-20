@@ -13729,11 +13729,93 @@ def _startup_worker():
                     text("INSERT INTO dc_migrations (key) VALUES (:k)"), {"k": _mk}
                 )
                 _conn.commit()
-                print("[DC-INCOME-UPDATED-BY-001] ✅ income_entries.updated_by_id column added", flush=True)
             else:
                 print("[DC-INCOME-UPDATED-BY-001] ✅ already applied (skipped)", flush=True)
     except Exception as _e:
         print(f"[DC-INCOME-UPDATED-BY-001] ⚠️ {_e}", flush=True)
+
+    # DC-VGK-CASH-INCOME-DATE-001: Add income_date column to vgk_cash_income_entries and backfill
+    try:
+        with engine.connect() as _conn:
+            _mk = 'vgk_cash_income_date_20260715'
+            _exists = _mk in _applied_keys
+            if not _exists:
+                _conn.execute(text(
+                    "ALTER TABLE vgk_cash_income_entries ADD COLUMN IF NOT EXISTS income_date DATE"
+                ))
+                _conn.execute(text(
+                    "UPDATE vgk_cash_income_entries SET income_date = created_at::date WHERE income_date IS NULL"
+                ))
+                _conn.execute(
+                    text("INSERT INTO dc_migrations (key) VALUES (:k)"), {"k": _mk}
+                )
+                _conn.commit()
+            else:
+                print("[DC-VGK-CASH-INCOME-DATE-001] ✅ already applied (skipped)", flush=True)
+    except Exception as _e:
+        print(f"[DC-VGK-CASH-INCOME-DATE-001] ⚠️ {_e}", flush=True)
+
+    # DC-L2-VSCC-DEDUP-001: De-duplicate VSCC entries for L2 upline partners
+    try:
+        with engine.connect() as _conn:
+            _mk = 'l2_vscc_dedup_20260718'
+            _exists = _mk in _applied_keys
+            if not _exists:
+                _conn.execute(text("""
+                    UPDATE vgk_cash_income_entries
+                       SET status = 'CANCELLED',
+                           cancelled_reason = 'DC-L2-VSCC-DEDUP-001: Duplicate VSCC entry removed'
+                     WHERE kind = 'SENIOR_COMM'
+                       AND status != 'CANCELLED'
+                       AND id NOT IN (
+                           SELECT MIN(id)
+                             FROM vgk_cash_income_entries
+                            WHERE kind = 'SENIOR_COMM'
+                              AND status != 'CANCELLED'
+                            GROUP BY partner_id, source_lead_id
+                       )
+                """))
+                _conn.execute(text("INSERT INTO dc_migrations (key) VALUES (:k)"), {"k": _mk})
+                _conn.commit()
+                print("[DC-L2-VSCC-DEDUP-001] ✅ Duplicate VSCC entries de-duplicated", flush=True)
+            else:
+                print("[DC-L2-VSCC-DEDUP-001] ✅ already applied (skipped)", flush=True)
+    except Exception as _e:
+        print(f"[DC-L2-VSCC-DEDUP-001] ⚠️ {_e}", flush=True)
+
+    # DC-SOLAR-COMM-BACKFILL-001: Generate missing COMMISSION drafts for solar leads at subsidy_pending or completed
+    try:
+        with Session(engine) as _session:
+            _mk = 'solar_comm_backfill_20260719'
+            _exists = _mk in _applied_keys
+            if not _exists:
+                from app.services.vgk_cash_income import generate_vgk_cash_income_drafts
+                _subpend_leads = _session.execute(text("""
+                    SELECT l.id FROM crm_leads l
+                    WHERE (l.category_id = 6 OR l.solar_pipeline_status IS NOT NULL)
+                      AND l.solar_pipeline_status IN ('subsidy_pending', 'completed')
+                      AND l.associated_partner_id IS NOT NULL
+                      AND NOT EXISTS (
+                          SELECT 1 FROM vgk_cash_income_entries e
+                          WHERE e.source_lead_id = l.id
+                            AND e.kind = 'COMMISSION'
+                            AND e.status != 'CANCELLED'
+                      )
+                """)).scalars().all()
+                _created_cnt = 0
+                for _lid in _subpend_leads:
+                    try:
+                        _cnt = generate_vgk_cash_income_drafts(_session, _lid, actor_employee_id=None)
+                        _created_cnt += (_cnt or 0)
+                    except Exception as _gen_err:
+                        print(f"[DC-SOLAR-COMM-BACKFILL-001] ⚠️ Failed for lead #{_lid}: {_gen_err}", flush=True)
+                _session.execute(text("INSERT INTO dc_migrations (key) VALUES (:k)"), {"k": _mk})
+                _session.commit()
+                print(f"[DC-SOLAR-COMM-BACKFILL-001] ✅ Backfilled {_created_cnt} COMMISSION entries across {len(_subpend_leads)} leads", flush=True)
+            else:
+                print("[DC-SOLAR-COMM-BACKFILL-001] ✅ already applied (skipped)", flush=True)
+    except Exception as _e:
+        print(f"[DC-SOLAR-COMM-BACKFILL-001] ⚠️ {_e}", flush=True)
 
     # DC-SOLAR-VENDOR-LEDGER-001: solar_vendor_id on income_entries + solar_vendor_ledger table
     try:

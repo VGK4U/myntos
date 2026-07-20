@@ -156,6 +156,7 @@ textarea:focus,input[type=text]:focus,select:focus{border-color:#059669}
     <option value="not_available">❌ Not Available</option>
   </select>
   <button class="btn-act" onclick="clearDateFilter()" style="background:#f3f4f6;color:#6b7280;border:1.5px solid #d1fae5" title="Clear date filters"><i class="fas fa-times"></i></button>
+  <button class="btn-act" id="btnGroupToggle" onclick="toggleGroupView()" style="background:#e0e7ff;color:#3730a3;border:1.5px solid #c7d2fe"><i class="fas fa-sitemap me-1"></i>3-Level Accordion View</button>
   <button class="btn-act btn-confirm" onclick="loadList()" style="margin-left:auto"><i class="fas fa-redo"></i> Refresh</button>
 </div>
 
@@ -241,7 +242,25 @@ function toast(msg, kind='success'){
 }
 function fmt(n){ return '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:2}); }
 function fmtDt(s){ if(!s)return '-'; const ist=(s.endsWith('Z')||s.includes('+'))?s:s+'+05:30'; const d=new Date(ist); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit',timeZone:'Asia/Kolkata'}) + ' ' + d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'}); }
-function fmtDate(s){ if(!s)return '—'; const ist=(s.endsWith('Z')||s.includes('+'))?s:s+'+05:30'; const d=new Date(ist); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Kolkata'}); }
+function fmtDate(s){
+  if(!s || s==='null' || s==='undefined') return '—';
+  try {
+    const ist = (typeof s==='string' && (s.endsWith('Z')||s.includes('+'))) ? s : s+'+05:30';
+    const d = new Date(ist);
+    if(isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Kolkata'});
+  } catch(e){ return '—'; }
+}
+
+function getDateKey(s){
+  if(!s || s==='null' || s==='undefined') return 'NO_DATE';
+  try {
+    const ist = (typeof s==='string' && (s.endsWith('Z')||s.includes('+'))) ? s : s+'+05:30';
+    const d = new Date(ist);
+    if(isNaN(d.getTime())) return 'NO_DATE';
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  } catch(e){ return 'NO_DATE'; }
+}
 function debouncedLoad(){ clearTimeout(window._dt); window._dt = setTimeout(loadList, 350); }
 
 // DC-SEARCH-AC-001: Partner autocomplete for Search field ─────────────────────
@@ -620,68 +639,153 @@ function _summaryFromRows(rows){
   return Object.values(agg);
 }
 
+let GROUP_VIEW = true;
+
+function toggleGroupView(){
+  GROUP_VIEW = !GROUP_VIEW;
+  const btn = document.getElementById('btnGroupToggle');
+  if(btn) btn.innerHTML = GROUP_VIEW ? '<i class="fas fa-list me-1"></i>Flat View' : '<i class="fas fa-sitemap me-1"></i>3-Level Accordion View';
+  renderTable(ROWS);
+}
+
+function toggleAcc(cls){
+  document.querySelectorAll('.' + cls).forEach(el => {
+    el.style.display = (el.style.display === 'none' ? '' : 'none');
+  });
+}
+
+function renderRowHtml(r, extraClass=''){
+  const acts    = (r.available_actions || []).map(a => actBtn(r, a)).join('');
+  const paidBtns = r.status === 'PAID' && !r._is_bonanza && !r._is_field_allowance ? `
+    <button class="btn-act btn-wa" title="Send WhatsApp" onclick="sendWA(${r.id},${r.company_id||CO})">
+      <i class="fab fa-whatsapp"></i> WA
+    </button>
+    <button class="btn-act btn-wa-web" title="Open WhatsApp Web" onclick="openWAWeb(${r.id})">
+      <i class="fab fa-whatsapp"></i> Direct
+    </button>
+    <button class="btn-act btn-card" title="Download earner card" onclick="downloadCard(${r.id},${r.company_id||CO})">
+      <i class="fas fa-image"></i> Card
+    </button>` : '';
+
+  const statusBadge = `<span class="badge-st b-${(r.status||'').replace(' ','\\ ')}">${r.status||'—'}</span>` +
+    (r.ledger_posted ? ' <i class="fas fa-book" title="Ledger posted" style="color:#059669"></i>' : '');
+
+  const stage1Col = r._is_field_allowance && r._raw_fa
+    ? (r._raw_fa.stage_1_approved_by ? `<small><i class="fas fa-check" style="color:#059669"></i> ${r._raw_fa.stage_1_approved_by}<br>${fmtDt(r._raw_fa.stage_1_approved_at)}</small>` : '—')
+    : (r.stage_1_approved_by ? `<small><i class="fas fa-user-check" style="color:#7c3aed"></i> ${r.stage_1_approved_by}<br>${fmtDt(r.stage_1_approved_at)}</small>` : (r.confirmed_at ? `<small style="color:#9ca3af">Conf: ${fmtDt(r.confirmed_at)}</small>` : '—'));
+
+  const stage2Col = r._is_field_allowance && r._raw_fa
+    ? (r._raw_fa.stage_2_paid_by ? `<small><i class="fas fa-check" style="color:#15803d"></i> ${r._raw_fa.stage_2_paid_by}<br>${fmtDt(r._raw_fa.stage_2_paid_at)}</small>` : '—')
+    : (r.paid_at ? `<small><i class="fas fa-check" style="color:#15803d"></i> ${fmtDt(r.paid_at)}${r.payment_mode?'<br><span style="color:#374151">'+r.payment_mode+'</span>':''}${r.payment_utr?'<br><span style="color:#6b7280">'+r.payment_utr+'</span>':''}</small>` : '—');
+
+  const netCell = (function(){
+    if((r.net_payout||0) > 0) return fmt(r.net_payout);
+    if(r.status==='DRAFT'||r.status==='PENDING'){
+      const g=+(r.commission_amount||0);
+      const adm=+(g*0.08).toFixed(2);
+      const pay=g-adm;
+      const tds=+(pay*0.02).toFixed(2);
+      return '<span style="color:#d97706;font-size:11px" title="Estimated — deductions not yet applied">≈ '+fmt(pay-tds)+'</span>';
+    }
+    return fmt(0);
+  })();
+
+  const incomeDate = r.income_date || r.created_at || null;
+  return `<tr class="${extraClass}">
+    <td style="white-space:nowrap;color:#374151;font-size:12px"><strong>${fmtDate(incomeDate)}</strong></td>
+    <td><strong>${r.entry_number || ('#'+r.id)}</strong>${r.skip_reason ? `<br><small style="color:#7c3aed" title="${r.skip_reason}"><i class="fas fa-bolt"></i> skip</small>`:''}</td>
+    <td><span class="kind-pill ${kindCss(r.kind)}">${kindLabel(r.kind, r.level)}</span></td>
+    <td>${r.partner_name||'-'}<br><small class="text-muted">${r.partner_code||''}</small></td>
+    <td><small>${r.client_name||'—'}</small></td>
+    <td style="text-align:right;color:#1e40af;font-weight:600">${r.kind==='ADVANCE' ? '<span style="color:#9ca3af">—</span>' : (r.deal_value_received ? fmt(r.deal_value_received) : '<span style="color:#9ca3af">—</span>')}</td>
+    <td style="text-align:right;color:#7c3aed;font-weight:600">${r.kind==='ADVANCE' ? '<span style="color:#9ca3af">—</span>' : (r.commission_pct > 0 ? r.commission_pct.toFixed(2)+'%' : (r.deal_value_received && r.commission_amount ? (r.commission_amount/r.deal_value_received*100).toFixed(2)+'%' : '<span style="color:#9ca3af">—</span>'))}</td>
+    <td style="text-align:right;color:#059669;font-weight:600">${fmt(r.commission_amount)}</td>
+    <td style="text-align:right;color:#d97706">${r.admin_charges ? fmt(r.admin_charges) : '—'}</td>
+    <td style="text-align:right;color:#dc2626">${r.tds_amount ? fmt(r.tds_amount) : '—'}</td>
+    <td style="text-align:right;color:#15803d;font-weight:700">${netCell}</td>
+    <td>${statusBadge}</td>
+    <td style="text-align:center">${r.kind==='ADVANCE' || r.kind==='SLAB_BONUS' || r.kind==='SENIOR_COMM' ? pointsBalanceBadge(r) : '<small class="text-muted">—</small>'}</td>
+    <td>${stage1Col}</td>
+    <td>${stage2Col}</td>
+    <td style="text-align:center;white-space:nowrap">${acts}${paidBtns}${(!acts && !paidBtns) ? '<small class="text-muted">—</small>' : ''}</td>
+  </tr>`;
+}
+
 function renderTable(rows){
   const tb = document.getElementById('tableBody');
   if(!rows.length){
-    tb.innerHTML = `<tr><td colspan="15" class="empty-state"><i class="fas fa-inbox"></i><br>No income records.</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="16" class="empty-state"><i class="fas fa-inbox"></i><br>No income records.</td></tr>`;
     return;
   }
-  tb.innerHTML = rows.map(r => {
-    const acts    = (r.available_actions || []).map(a => actBtn(r, a)).join('');
-    const paidBtns = r.status === 'PAID' && !r._is_bonanza && !r._is_field_allowance ? `
-      <button class="btn-act btn-wa" title="Send WhatsApp" onclick="sendWA(${r.id},${r.company_id||CO})">
-        <i class="fab fa-whatsapp"></i> WA
-      </button>
-      <button class="btn-act btn-wa-web" title="Open WhatsApp Web" onclick="openWAWeb(${r.id})">
-        <i class="fab fa-whatsapp"></i> Direct
-      </button>
-      <button class="btn-act btn-card" title="Download earner card" onclick="downloadCard(${r.id},${r.company_id||CO})">
-        <i class="fas fa-image"></i> Card
-      </button>` : '';
 
-    const statusBadge = `<span class="badge-st b-${(r.status||'').replace(' ','\\ ')}">${r.status||'—'}</span>` +
-      (r.ledger_posted ? ' <i class="fas fa-book" title="Ledger posted" style="color:#059669"></i>' : '');
+  if(!GROUP_VIEW){
+    tb.innerHTML = rows.map(r => renderRowHtml(r)).join('');
+    return;
+  }
 
-    const stage1Col = r._is_field_allowance && r._raw_fa
-      ? (r._raw_fa.stage_1_approved_by ? `<small><i class="fas fa-check" style="color:#059669"></i> ${r._raw_fa.stage_1_approved_by}<br>${fmtDt(r._raw_fa.stage_1_approved_at)}</small>` : '—')
-      : (r.stage_1_approved_by ? `<small><i class="fas fa-user-check" style="color:#7c3aed"></i> ${r.stage_1_approved_by}<br>${fmtDt(r.stage_1_approved_at)}</small>` : (r.confirmed_at ? `<small style="color:#9ca3af">Conf: ${fmtDt(r.confirmed_at)}</small>` : '—'));
+  // DC-3LEVEL-DRILL-001 & DC-PARTNER-GROUP-001: 3-level drilldown (Date → Member → Entries)
+  const dateMap = {};
+  for(const r of rows){
+    const rawDt = r.income_date || r.created_at || null;
+    const dateKey = getDateKey(rawDt);
+    const dateDisplay = fmtDate(rawDt);
 
-    const stage2Col = r._is_field_allowance && r._raw_fa
-      ? (r._raw_fa.stage_2_paid_by ? `<small><i class="fas fa-check" style="color:#15803d"></i> ${r._raw_fa.stage_2_paid_by}<br>${fmtDt(r._raw_fa.stage_2_paid_at)}</small>` : '—')
-      : (r.paid_at ? `<small><i class="fas fa-check" style="color:#15803d"></i> ${fmtDt(r.paid_at)}${r.payment_mode?'<br><span style="color:#374151">'+r.payment_mode+'</span>':''}${r.payment_utr?'<br><span style="color:#6b7280">'+r.payment_utr+'</span>':''}</small>` : '—');
+    if(!dateMap[dateKey]){
+      dateMap[dateKey] = { key: dateKey, dateDisplay, net: 0, gross: 0, count: 0, partners: {} };
+    }
+    dateMap[dateKey].net += +(r.net_payout || 0);
+    dateMap[dateKey].gross += +(r.commission_amount || 0);
+    dateMap[dateKey].count++;
 
-    const netCell = (function(){
-      if((r.net_payout||0) > 0) return fmt(r.net_payout);
-      if(r.status==='DRAFT'||r.status==='PENDING'){
-        const g=+(r.commission_amount||0);
-        const adm=+(g*0.08).toFixed(2);
-        const pay=g-adm;
-        const tds=+(pay*0.02).toFixed(2);
-        return '<span style="color:#d97706;font-size:11px" title="Estimated — deductions not yet applied">≈ '+fmt(pay-tds)+'</span>';
-      }
-      return fmt(0);
-    })();
+    const partnerKey = (r.partner_code || r.partner_name || 'UNASSIGNED').replace(/[^a-zA-Z0-9]/g, '_');
+    const partnerName = r.partner_name || r.partner_code || 'Unassigned';
+    const partnerCode = r.partner_code || '';
 
-    const incomeDate = r.income_date || r.created_at || null;
-    return `<tr>
-      <td style="white-space:nowrap;color:#374151;font-size:12px"><strong>${fmtDate(incomeDate)}</strong></td>
-      <td><strong>${r.entry_number || ('#'+r.id)}</strong>${r.skip_reason ? `<br><small style="color:#7c3aed" title="${r.skip_reason}"><i class="fas fa-bolt"></i> skip</small>`:''}</td>
-      <td><span class="kind-pill ${kindCss(r.kind)}">${kindLabel(r.kind, r.level)}</span></td>
-      <td>${r.partner_name||'-'}<br><small class="text-muted">${r.partner_code||''}</small></td>
-      <td><small>${r.client_name||'—'}</small></td>
-      <td style="text-align:right;color:#1e40af;font-weight:600">${r.kind==='ADVANCE' ? '<span style="color:#9ca3af">—</span>' : (r.deal_value_received ? fmt(r.deal_value_received) : '<span style="color:#9ca3af">—</span>')}</td>
-      <td style="text-align:right;color:#7c3aed;font-weight:600">${r.kind==='ADVANCE' ? '<span style="color:#9ca3af">—</span>' : (r.commission_pct > 0 ? r.commission_pct.toFixed(2)+'%' : (r.deal_value_received && r.commission_amount ? (r.commission_amount/r.deal_value_received*100).toFixed(2)+'%' : '<span style="color:#9ca3af">—</span>'))}</td>
-      <td style="text-align:right;color:#059669;font-weight:600">${fmt(r.commission_amount)}</td>
-      <td style="text-align:right;color:#d97706">${r.admin_charges ? fmt(r.admin_charges) : '—'}</td>
-      <td style="text-align:right;color:#dc2626">${r.tds_amount ? fmt(r.tds_amount) : '—'}</td>
-      <td style="text-align:right;color:#15803d;font-weight:700">${netCell}</td>
-      <td>${statusBadge}</td>
-      <td style="text-align:center">${r.kind==='ADVANCE' || r.kind==='SLAB_BONUS' || r.kind==='SENIOR_COMM' ? pointsBalanceBadge(r) : '<small class="text-muted">—</small>'}</td>
-      <td>${stage1Col}</td>
-      <td>${stage2Col}</td>
-      <td style="text-align:center;white-space:nowrap">${acts}${paidBtns}${(!acts && !paidBtns) ? '<small class="text-muted">—</small>' : ''}</td>
+    if(!dateMap[dateKey].partners[partnerKey]){
+      dateMap[dateKey].partners[partnerKey] = {
+        key: partnerKey, name: partnerName, code: partnerCode,
+        net: 0, gross: 0, count: 0, entries: []
+      };
+    }
+    dateMap[dateKey].partners[partnerKey].net += +(r.net_payout || 0);
+    dateMap[dateKey].partners[partnerKey].gross += +(r.commission_amount || 0);
+    dateMap[dateKey].partners[partnerKey].count++;
+    dateMap[dateKey].partners[partnerKey].entries.push(r);
+  }
+
+  let html = '';
+  const sortedDateKeys = Object.keys(dateMap).sort().reverse();
+  for(const dKey of sortedDateKeys){
+    const dGroup = dateMap[dKey];
+    const dCls = 'd-group-' + dKey.replace(/[^a-zA-Z0-9]/g, '_');
+
+    html += `<tr style="background:#ecfdf5;cursor:pointer;border-top:2px solid #a7f3d0;" onclick="toggleAcc('${dCls}')">
+      <td colspan="16" style="padding:10px 14px;font-weight:800;color:#064e3b;font-size:13px;">
+        <i class="fas fa-chevron-down me-2" style="font-size:11px;"></i><i class="fas fa-calendar-day me-2" style="color:#059669"></i> ${dGroup.dateDisplay}
+        <span class="badge bg-success ms-2">${dGroup.count} items</span>
+        <span class="ms-3" style="color:#047857;">Net Payout: ${fmt(dGroup.net)}</span>
+        <span class="ms-2" style="color:#6b7280;font-size:11px;">Gross: ${fmt(dGroup.gross)}</span>
+      </td>
     </tr>`;
-  }).join('');
+
+    for(const pKey in dGroup.partners){
+      const pGroup = dGroup.partners[pKey];
+      const pCls = 'p-group-' + dKey.replace(/[^a-zA-Z0-9]/g, '_') + '-' + pKey;
+
+      html += `<tr class="${dCls}" style="background:#f0f9ff;cursor:pointer;" onclick="toggleAcc('${pCls}')">
+        <td colspan="16" style="padding:8px 14px 8px 32px;font-weight:700;color:#0369a1;font-size:12.5px;">
+          <i class="fas fa-chevron-down me-2" style="font-size:10px;"></i><i class="fas fa-user-circle me-2" style="color:#0284c7"></i> ${pGroup.name} ${pGroup.code ? '<small style="color:#64748b">('+pGroup.code+')</small>' : ''}
+          <span class="badge bg-info text-dark ms-2">${pGroup.count} entries</span>
+          <span class="ms-3" style="color:#0369a1;">Net Payout: ${fmt(pGroup.net)}</span>
+        </td>
+      </tr>`;
+
+      for(const entry of pGroup.entries){
+        html += renderRowHtml(entry, `${dCls} ${pCls}`);
+      }
+    }
+  }
+  tb.innerHTML = html;
 }
 
 function pointsBalanceBadge(r){

@@ -2797,6 +2797,7 @@ def get_my_leads(
     role_filter: Optional[str] = Query(None, description="DC Protocol (Mar 2026): Mobile tab filter — my_leads, as_primary, as_telecaller, as_field, as_handler, fresh, self"),
     status: Optional[str] = None,
     priority: Optional[str] = None,
+    category: Optional[str] = Query(None),
     category_id: Optional[int] = None,
     search: Optional[str] = None,
     next_followup_from: Optional[str] = None,
@@ -2961,8 +2962,37 @@ def get_my_leads(
             query = query.filter(CRMLead.status == status)
     if priority:
         query = query.filter(CRMLead.priority == priority)
-    if category_id:
-        query = query.filter(CRMLead.category_id == category_id)
+    # DC Protocol (Jul 2026 Task 11): Category filter — dual-match logic for both string name and integer ID.
+    if category or category_id is not None:
+        _cat_ids = []
+        if category_id is not None:
+            _cat_ids.append(category_id)
+        if category:
+            if isinstance(category, int) or (isinstance(category, str) and category.isdigit()):
+                _cat_ids.append(int(category))
+            else:
+                _matched_cats = db.query(SignupCategory.id).filter(
+                    or_(
+                        SignupCategory.name.ilike(category),
+                        SignupCategory.name.ilike(f"%{category}%"),
+                        SignupCategory.code.ilike(category)
+                    )
+                ).all()
+                _cat_ids.extend([r.id for r in _matched_cats])
+
+        _cat_ids = list(set(_cat_ids))
+        if _cat_ids:
+            _deal_lead_sq = (
+                db.query(CRMLeadDeal.lead_id)
+                .filter(CRMLeadDeal.revenue_category_id.in_(_cat_ids))
+                .scalar_subquery()
+            )
+            query = query.filter(or_(
+                CRMLead.category_id.in_(_cat_ids),
+                CRMLead.id.in_(_deal_lead_sq)
+            ))
+        else:
+            query = query.filter(CRMLead.id == -1)
     if search:
         _st = f'%{search}%'
         _sc = [
@@ -3316,11 +3346,37 @@ def list_leads(
             query = query.filter(CRMLead.status == status)
     if priority:
         query = query.filter(CRMLead.priority == priority)
-    if category_id:
-        query = query.filter(CRMLead.category_id == category_id)
-    if category:
-        query = query.join(SignupCategory, CRMLead.category_id == SignupCategory.id)
-        query = query.filter(SignupCategory.name == category)
+    # DC Protocol (Jul 2026 Task 11): Category filter — dual-match logic for both string name and integer ID.
+    if category or category_id is not None:
+        _cat_ids = []
+        if category_id is not None:
+            _cat_ids.append(category_id)
+        if category:
+            if isinstance(category, int) or (isinstance(category, str) and category.isdigit()):
+                _cat_ids.append(int(category))
+            else:
+                _matched_cats = db.query(SignupCategory.id).filter(
+                    or_(
+                        SignupCategory.name.ilike(category),
+                        SignupCategory.name.ilike(f"%{category}%"),
+                        SignupCategory.code.ilike(category)
+                    )
+                ).all()
+                _cat_ids.extend([r.id for r in _matched_cats])
+
+        _cat_ids = list(set(_cat_ids))
+        if _cat_ids:
+            _deal_lead_sq = (
+                db.query(CRMLeadDeal.lead_id)
+                .filter(CRMLeadDeal.revenue_category_id.in_(_cat_ids))
+                .scalar_subquery()
+            )
+            query = query.filter(or_(
+                CRMLead.category_id.in_(_cat_ids),
+                CRMLead.id.in_(_deal_lead_sq)
+            ))
+        else:
+            query = query.filter(CRMLead.id == -1)
     if handler_type:
         query = query.filter(CRMLead.handler_type == handler_type)
     if handler_id:
@@ -4596,6 +4652,7 @@ def list_team_leads(
 @router.get("/master-leads")
 def master_leads(
     category: Optional[str] = Query(None),
+    category_id: Optional[int] = Query(None),
     status: Optional[str] = Query(None),
     priority: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
@@ -4693,17 +4750,25 @@ def master_leads(
             )
         ))
 
-    # DC Protocol (Apr 2026): Category filter — dual-match logic.
-    # A lead is visible on a category page if:
-    #   (A) the lead's own category_id maps to a SignupCategory with name == category, OR
-    #   (B) the lead has at least one deal whose revenue_category_id maps to SignupCategory name == category.
-    # This ensures cross-category deals (e.g. EV B2B deal on a Solar lead) surface
-    # the lead on the deal's category page without altering the lead's primary category.
-    if category:
-        _cat_ids = [
-            r.id for r in db.query(SignupCategory.id)
-            .filter(SignupCategory.name == category).all()
-        ]
+    # DC Protocol (Jul 2026 Task 11): Category filter — dual-match logic for both string name and integer ID.
+    if category or category_id is not None:
+        _cat_ids = []
+        if category_id is not None:
+            _cat_ids.append(category_id)
+        if category:
+            if isinstance(category, int) or (isinstance(category, str) and category.isdigit()):
+                _cat_ids.append(int(category))
+            else:
+                _matched_cats = db.query(SignupCategory.id).filter(
+                    or_(
+                        SignupCategory.name.ilike(category),
+                        SignupCategory.name.ilike(f"%{category}%"),
+                        SignupCategory.code.ilike(category)
+                    )
+                ).all()
+                _cat_ids.extend([r.id for r in _matched_cats])
+
+        _cat_ids = list(set(_cat_ids))
         if _cat_ids:
             _deal_lead_sq = (
                 db.query(CRMLeadDeal.lead_id)
@@ -4868,6 +4933,8 @@ def master_leads(
         _search_clauses = [
             CRMLead.name.ilike(st),
             CRMLead.phone.ilike(st),
+            CRMLead.alternate_phone.ilike(st),
+            CRMLead.co_applicant_phone.ilike(st),
             CRMLead.email.ilike(st),
             CRMLead.application_no.ilike(st),
             CRMLead.pincode.ilike(st),
@@ -5557,13 +5624,16 @@ def lead_analytics(
             'completed_received': float(getattr(r, 'comp_received', 0) or 0),
         }
 
+    _pipe_cond = _and_(_won_ok, _or_(CRMLead.solar_pipeline_status.is_(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_PIPE_PS)))
     _sr = base.with_entities(
         _f.count(CRMLead.id).label('total'),
         _f.coalesce(_f.sum(_sa_case((_won_ok, 1), else_=0)), 0).label('won'),
+        _f.coalesce(_f.sum(_sa_case((_pipe_cond, 1), else_=0)), 0).label('pipe_cnt'),
         _f.coalesce(_f.sum(_sa_case((CRMLead.status == 'lost', 1), else_=0)), 0).label('lost'),
         _f.coalesce(_f.sum(_sa_case((CRMLead.status.in_(IN_PROGRESS_STATUSES), 1), else_=0)), 0).label('in_prog'),
         _f.coalesce(_f.sum(_eff_dv()), 0).label('dv_all'),
         _f.coalesce(_f.sum(_sa_case((_won_ok, _eff_dv()), else_=0)), 0).label('dv_won'),
+        _f.coalesce(_f.sum(_sa_case((_pipe_cond, _eff_dv()), else_=0)), 0).label('pipe_val'),
         _f.coalesce(_f.sum(CRMLead.deal_value_received), 0).label('dv_coll'),
         # DC Protocol (Apr 2026): Exclude loan_rejected from pending; track separately.
         # Null-safe: WHEN loan_rejected THEN 0 ELSE balance — NULL pipeline status goes to ELSE (included in pending)
@@ -5579,10 +5649,12 @@ def lead_analytics(
     ).one()
     total_leads     = int(_sr.total)
     won_leads       = int(_sr.won)
+    pipeline_leads  = int(_sr.pipe_cnt)
     lost_leads      = int(_sr.lost)
     in_progress     = int(_sr.in_prog)
     _dv_all         = float(_sr.dv_all)
     _dv_won         = float(_sr.dv_won)
+    _dv_pipe        = float(_sr.pipe_val)
     _avg_dv         = _dv_all / total_leads if total_leads > 0 else 0
     _dv_coll         = float(_sr.dv_coll)
     _dv_pend         = float(_sr.dv_pend)
@@ -5967,19 +6039,54 @@ def lead_analytics(
     _mo12_start = datetime(_mo12_yr, _mo12_mn, 1)
     _trend_date_mo = _f.coalesce(CRMLead.submit_date, _sa_cast(CRMLead.created_at, _sa_Date))
 
-    # Q1: Total leads by submit/creation date (unchanged)
+    # Q1: Total leads by submit/creation date (with detailed metrics)
+    from sqlalchemy import and_ as _sa_and, or_ as _sa_or
+    _eff_dv_expr = _eff_dv()
+    _EXCL_PIPE_PS = ['cancelled', 'not_interested', 'completed', 'loan_rejected', 'different_vendor', 'documents_issue']
+
     _mo_tot_rows = base.filter(_trend_date_mo >= _mo12_start.date()).with_entities(
         _f.date_trunc('month', _trend_date_mo).label('bucket'),
         _f.count(CRMLead.id).label('total'),
+        _f.coalesce(_f.sum(_sa_case(
+            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(['cancelled', 'not_interested'])), 1),
+            else_=0
+        )), 0).label('submitted'),
+        _f.coalesce(_f.sum(_sa_case(
+            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(['cancelled', 'not_interested'])), _eff_dv_expr),
+            else_=0
+        )), 0).label('sub_val'),
+        _f.coalesce(_f.sum(_sa_case(
+            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_PIPE_PS)), 1),
+            else_=0
+        )), 0).label('pipeline'),
+        _f.coalesce(_f.sum(_sa_case(
+            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_PIPE_PS)), _eff_dv_expr),
+            else_=0
+        )), 0).label('pipe_val'),
+        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'pending_with_bank', 1), else_=0)), 0).label('at_bank'),
+        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'electricity_bill_change', 1), else_=0)), 0).label('eb_change'),
+        _f.coalesce(_f.sum(_sa_case(
+            (CRMLead.solar_pipeline_status.in_(['installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending']), 1),
+            else_=0
+        )), 0).label('in_prog'),
+        _f.coalesce(_f.sum(_sa_case(
+            (CRMLead.solar_pipeline_status.in_(['installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending']), _eff_dv_expr),
+            else_=0
+        )), 0).label('in_prog_val'),
+        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'installation_pending', 1), else_=0)), 0).label('inst_pending'),
+        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'balance_pending', 1), else_=0)), 0).label('bal_pending')
     ).group_by('bucket').all()
-    _mo_tot_map = {(r.bucket.year, r.bucket.month): int(r.total) for r in _mo_tot_rows if r.bucket}
+
+    _mo_tot_map = {
+        (r.bucket.year, r.bucket.month): (
+            int(r.total), int(r.submitted), float(r.sub_val), int(r.pipeline), float(r.pipe_val),
+            int(r.at_bank), int(r.eb_change), int(r.in_prog), float(r.in_prog_val),
+            int(r.inst_pending), int(r.bal_pending)
+        )
+        for r in _mo_tot_rows if r.bucket
+    }
 
     # Q2: Won leads — ALL segments use submit_date as primary WON bucket date.
-    # DC-WON-DATE-ALL-001: submit_date → actual_close_date → (submit_date or created_at).
-    # Solar leads: submit_date set (backfilled) so they always use submit_date.
-    # Non-solar leads: submit_date is NULL → falls through to actual_close_date.
-    # Last resort: _trend_date_mo = COALESCE(submit_date, created_at). WON is NEVER
-    # bucketed by created_at as primary — that is the lead creation date, not the won date.
     _mo_won_dt = _f.coalesce(
         CRMLead.submit_date,
         _sa_cast(CRMLead.actual_close_date, _sa_Date),
@@ -6009,23 +6116,40 @@ def lead_analytics(
         for r in _mo_comp_rows if r.bucket
     }
 
+    # Q4: Installed leads bucketed by installation_date
+    _mo_inst_rows = base.filter(CRMLead.installation_date.isnot(None), CRMLead.installation_date >= _mo12_start.date()).with_entities(
+        _f.date_trunc('month', _sa_cast(CRMLead.installation_date, _sa_Date)).label('bucket'),
+        _f.count(CRMLead.id).label('installed')
+    ).group_by('bucket').all()
+    _mo_inst_map = {(r.bucket.year, r.bucket.month): int(r.installed) for r in _mo_inst_rows if r.bucket}
+
     monthly_trend = []
     for _mo in range(11, -1, -1):
         _yr = _today.year
         _mn = _today.month - _mo
         while _mn <= 0:
             _mn += 12; _yr -= 1
-        _m_total = _mo_tot_map.get((_yr, _mn), 0)
+        _tot_data = _mo_tot_map.get((_yr, _mn), (0, 0, 0.0, 0, 0.0, 0, 0, 0, 0.0, 0, 0))
+        (
+            _m_total, _m_sub, _m_sub_val, _m_pipe, _m_pipe_val,
+            _m_at_bank, _m_eb_change, _m_in_prog, _m_in_prog_val,
+            _m_inst_pending, _m_bal_pending
+        ) = _tot_data
         _m_won, _m_dv, _m_wr = _mo_won_map.get((_yr, _mn), (0, 0.0, 0.0))
         _m_comp, _m_fdv, _m_cr = _mo_comp_map.get((_yr, _mn), (0, 0.0, 0.0))
+        _m_inst = _mo_inst_map.get((_yr, _mn), 0)
         monthly_trend.append({
             'label': f"{_date(1900, _mn, 1).strftime('%b')} {_yr}",
             'total': _m_total, 'won': _m_won,
-            'deal_value': _m_dv, 'win_received': _m_wr,
-            'completed': _m_comp, 'final_deal_value': _m_fdv, 'completed_received': _m_cr,
+            'submitted': _m_sub, 'submitted_value': _m_sub_val,
+            'pipeline': _m_pipe, 'pipeline_value': _m_pipe_val,
+            'at_bank': _m_at_bank, 'eb_change': _m_eb_change,
+            'installed': _m_inst, 'completed': _m_comp, 'comp_value': _m_fdv,
+            'in_progress': _m_in_prog, 'inprog_value': _m_in_prog_val,
+            'inst_pending': _m_inst_pending, 'bal_pending': _m_bal_pending,
         })
 
-    # ── Weekly trend (last 12 weeks) — 3 separate queries ────────────────────
+    # ── Weekly trend (last 12 weeks) — 4 separate queries ────────────────────
     from datetime import timedelta as _td
     _today_dt = datetime.combine(_today, datetime.min.time())
     _week_start = _today_dt - _td(days=_today.weekday())
@@ -6036,8 +6160,43 @@ def lead_analytics(
     _wk_tot_rows = base.filter(_trend_date_wk >= _wk12_start.date()).with_entities(
         _f.date_trunc('week', _trend_date_wk).label('bucket'),
         _f.count(CRMLead.id).label('total'),
+        _f.coalesce(_f.sum(_sa_case(
+            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(['cancelled', 'not_interested'])), 1),
+            else_=0
+        )), 0).label('submitted'),
+        _f.coalesce(_f.sum(_sa_case(
+            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(['cancelled', 'not_interested'])), _eff_dv_expr),
+            else_=0
+        )), 0).label('sub_val'),
+        _f.coalesce(_f.sum(_sa_case(
+            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_PIPE_PS)), 1),
+            else_=0
+        )), 0).label('pipeline'),
+        _f.coalesce(_f.sum(_sa_case(
+            (_sa_and(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_PIPE_PS)), _eff_dv_expr),
+            else_=0
+        )), 0).label('pipe_val'),
+        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'pending_with_bank', 1), else_=0)), 0).label('at_bank'),
+        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'electricity_bill_change', 1), else_=0)), 0).label('eb_change'),
+        _f.coalesce(_f.sum(_sa_case(
+            (CRMLead.solar_pipeline_status.in_(['installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending']), 1),
+            else_=0
+        )), 0).label('in_prog'),
+        _f.coalesce(_f.sum(_sa_case(
+            (CRMLead.solar_pipeline_status.in_(['installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending']), _eff_dv_expr),
+            else_=0
+        )), 0).label('in_prog_val'),
+        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'installation_pending', 1), else_=0)), 0).label('inst_pending'),
+        _f.coalesce(_f.sum(_sa_case((CRMLead.solar_pipeline_status == 'balance_pending', 1), else_=0)), 0).label('bal_pending')
     ).group_by('bucket').all()
-    _wk_tot_map = {r.bucket.date(): int(r.total) for r in _wk_tot_rows if r.bucket}
+    _wk_tot_map = {
+        r.bucket.date(): (
+            int(r.total), int(r.submitted), float(r.sub_val), int(r.pipeline), float(r.pipe_val),
+            int(r.at_bank), int(r.eb_change), int(r.in_prog), float(r.in_prog_val),
+            int(r.inst_pending), int(r.bal_pending)
+        )
+        for r in _wk_tot_rows if r.bucket
+    }
 
     # Q2: Won leads — same date logic as monthly (DC-WON-DATE-ALL-001).
     _wk_won_dt = _f.coalesce(
@@ -6063,17 +6222,34 @@ def lead_analytics(
     ).group_by('bucket').all()
     _wk_comp_map = {r.bucket.date(): (int(r.completed), float(r.comp_value), float(r.comp_recv)) for r in _wk_comp_rows if r.bucket}
 
+    # Q4: Installed leads by installation_date
+    _wk_inst_rows = base.filter(CRMLead.installation_date.isnot(None), CRMLead.installation_date >= _wk12_start.date()).with_entities(
+        _f.date_trunc('week', _sa_cast(CRMLead.installation_date, _sa_Date)).label('bucket'),
+        _f.count(CRMLead.id).label('installed')
+    ).group_by('bucket').all()
+    _wk_inst_map = {r.bucket.date(): int(r.installed) for r in _wk_inst_rows if r.bucket}
+
     weekly_trend = []
     for _wk in range(11, -1, -1):
         _ws = _week_start - _td(weeks=_wk)
-        _w_total = _wk_tot_map.get(_ws.date(), 0)
+        _tot_data = _wk_tot_map.get(_ws.date(), (0, 0, 0.0, 0, 0.0, 0, 0, 0, 0.0, 0, 0))
+        (
+            _w_total, _w_submitted, _w_submitted_value, _w_pipeline, _w_pipeline_value,
+            _w_at_bank, _w_eb_change, _w_in_progress, _w_inprog_value,
+            _w_inst_pending, _w_bal_pending
+        ) = _tot_data
         _w_won, _w_dv, _w_wr = _wk_won_map.get(_ws.date(), (0, 0.0, 0.0))
         _w_comp, _w_fdv, _w_cr = _wk_comp_map.get(_ws.date(), (0, 0.0, 0.0))
+        _w_installed = _wk_inst_map.get(_ws.date(), 0)
         weekly_trend.append({
             'label': f"W{12-_wk} ({_ws.strftime('%d %b')})",
             'total': _w_total, 'won': _w_won,
-            'deal_value': _w_dv, 'win_received': _w_wr,
-            'completed': _w_comp, 'final_deal_value': _w_fdv, 'completed_received': _w_cr,
+            'submitted': _w_submitted, 'submitted_value': _w_submitted_value,
+            'pipeline': _w_pipeline, 'pipeline_value': _w_pipeline_value,
+            'at_bank': _w_at_bank, 'eb_change': _w_eb_change,
+            'installed': _w_installed, 'completed': _w_comp, 'comp_value': _w_fdv,
+            'in_progress': _w_in_progress, 'inprog_value': _w_inprog_value,
+            'inst_pending': _w_inst_pending, 'bal_pending': _w_bal_pending,
         })
 
     # ── EV B2B Stage Breakdown ────────────────────────────────────────────────
@@ -6115,10 +6291,12 @@ def lead_analytics(
         'summary': {
             'total_leads': total_leads,
             'won_leads': won_leads,
+            'pipeline_leads': pipeline_leads,
             'in_progress_leads': in_progress,
             'lost_leads': lost_leads,
             'total_deal_value': float(_dv_all),
             'won_deal_value': float(_dv_won),
+            'pipeline_deal_value': float(_dv_pipe),
             'avg_deal_value': round(_avg_dv, 2),
             'total_collected': _dv_coll,
             'total_pending': _dv_pend,
@@ -6349,6 +6527,27 @@ def exec_handler_leads(
                 'at': n.created_at.isoformat() if n.created_at else None,
             }
 
+    # Bulk enrich user names for ground support
+    from app.models.user import User as _User
+    _uids = list({l.mnr_handler_id for l in _leads if l.mnr_handler_id})
+    _unmap = {}
+    if _uids:
+        for u in db.query(_User).filter(_User.id.in_(_uids)).all():
+            _unmap[u.id] = u.name or u.id
+
+    # Bulk enrich: earliest transaction date per lead (DC-FIRST-PMT-003)
+    _txmap = {}
+    if _lids:
+        from app.models.crm import CRMLeadTransaction as _CLT
+        from sqlalchemy import func as _func
+        _txs = db.query(_CLT.lead_id, _func.min(_CLT.transaction_date).label('min_date')).filter(
+            _CLT.lead_id.in_(_lids),
+            _CLT.transaction_date.isnot(None)
+        ).group_by(_CLT.lead_id).all()
+        for t in _txs:
+            if t.min_date:
+                _txmap[t.lead_id] = t.min_date.date() if hasattr(t.min_date, 'date') else t.min_date
+
     def _mask(ph):
         if not ph:
             return None
@@ -6366,6 +6565,10 @@ def exec_handler_leads(
             'phone_raw': l.phone,
             'created_at': l.created_at.isoformat() if l.created_at else None,
             'submit_date': l.submit_date.isoformat() if l.submit_date else None,
+            'first_payment_received_date': (l.first_payment_received_date or _txmap.get(l.id)).isoformat() if (l.first_payment_received_date or _txmap.get(l.id)) else None,
+            'source': l.source or '—',
+            'ground_source': l.source_ref_name or '—',
+            'ground_support': _unmap.get(l.mnr_handler_id, l.mnr_handler_id) if l.mnr_handler_id else '—',
             'status': l.status or '—',
             'solar_pipeline_status': l.solar_pipeline_status,
             'category_name': _cmap.get(l.category_id) if l.category_id else None,
@@ -6374,6 +6577,258 @@ def exec_handler_leads(
             'brand_name': _bmap.get(l.solar_brand_id) if l.solar_brand_id else None,
             'deal_value_total': float(l.deal_value_total or 0),
             'deal_value_received': float(l.deal_value_received or 0),
+            'latest_note': _nmap.get(l.id),
+        } for l in _leads],
+    }
+
+
+@router.get("/exec-trend-leads")
+def exec_trend_leads(
+    period_type: str = Query(..., description="monthly or weekly"),
+    label: str = Query(..., description="The month or week label"),
+    metric: str = Query(..., description="The column/stage identifier"),
+    category: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    source: Optional[str] = Query(None),
+    solar_pipeline_status: Optional[str] = Query(None),
+    created_from: Optional[str] = Query(None),
+    created_to: Optional[str] = Query(None),
+    closed_from: Optional[str] = Query(None),
+    closed_to: Optional[str] = Query(None),
+    submit_date_from: Optional[str] = Query(None),
+    submit_date_to: Optional[str] = Query(None),
+    complete_date_from: Optional[str] = Query(None),
+    complete_date_to: Optional[str] = Query(None),
+    limit: int = Query(200, ge=1, le=500),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """DC-EXEC-DRILLDOWN-003: Lightweight lead list for a trend cell.
+    Applies the exact same bucketing and stage filter logic as the trends dashboard tables."""
+    from app.models.signup_category import SignupCategory as _SC2
+    from app.models.user import User as _User
+    from sqlalchemy import cast as _sa_cast, Date as _sa_Date, and_ as _sa_and, or_ as _sa_or, func as _sa_func
+    from datetime import date as _date, timedelta as _td
+
+    POST_WON = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed']
+    _EXCL_WON_PS = ['loan_rejected', 'documents_issue', 'not_interested', 'cancelled', 'different_vendor']
+    _EXCL_PIPE_PS = ['cancelled', 'not_interested', 'completed', 'loan_rejected', 'different_vendor', 'documents_issue']
+
+    _is_admin = is_vgk_admin((current_employee.staff_type or '').upper())
+    _eh_role_code = (current_employee.role.role_code if current_employee.role else '') or ''
+    if _eh_role_code in {'vgk4u', 'vgk4u_supreme', 'key_leadership', 'leadership_role', 'team_leader', 'manager'}:
+        _is_admin = True
+
+    def _pd(s):
+        try:
+            return datetime.fromisoformat(s.replace('Z', '+00:00').replace('T00:00:00+00:00', ''))
+        except Exception:
+            return None
+
+    # Parse company filters
+    _all_cos = db.query(AssociatedCompany).filter(AssociatedCompany.is_active == True).all()
+    if _is_admin:
+        _co_ids = [c.id for c in _all_cos]
+    else:
+        _co_ids = [current_employee.base_company_id] if current_employee.base_company_id else [c.id for c in _all_cos]
+
+    base = db.query(CRMLead).filter(CRMLead.company_id.in_(_co_ids))
+
+    # Standard dashboard filters
+    if category:
+        _cids = [r.id for r in db.query(_SC2.id).filter(_SC2.name == category).all()]
+        if _cids:
+            _dsq = db.query(CRMLeadDeal.lead_id).filter(CRMLeadDeal.revenue_category_id.in_(_cids)).scalar_subquery()
+            base = base.filter(_sa_or_(CRMLead.category_id.in_(_cids), CRMLead.id.in_(_dsq)))
+        else:
+            base = base.filter(CRMLead.id == -1)
+    if status:
+        base = base.filter(CRMLead.status.in_(POST_WON) if status == 'won_plus' else CRMLead.status == status)
+    if source:
+        base = base.filter(CRMLead.source.ilike(f'%{source}%'))
+    if solar_pipeline_status:
+        base = base.filter(CRMLead.solar_pipeline_status == solar_pipeline_status)
+    if created_from:
+        v = _pd(created_from)
+        if v: base = base.filter(CRMLead.created_at >= v)
+    if created_to:
+        v = _pd(created_to)
+        if v: base = base.filter(CRMLead.created_at <= v)
+    if closed_from:
+        v = _pd(closed_from)
+        if v: base = base.filter(CRMLead.actual_close_date >= v)
+    if closed_to:
+        v = _pd(closed_to)
+        if v: base = base.filter(CRMLead.actual_close_date <= v)
+    if submit_date_from:
+        v = _pd(submit_date_from)
+        if v: base = base.filter(CRMLead.submit_date >= (v.date() if hasattr(v, 'date') else v))
+    if submit_date_to:
+        v = _pd(submit_date_to)
+        if v: base = base.filter(CRMLead.submit_date <= (v.date() if hasattr(v, 'date') else v))
+    if complete_date_from:
+        v = _pd(complete_date_from)
+        if v: base = base.filter(CRMLead.complete_date >= (v.date() if hasattr(v, 'date') else v))
+    if complete_date_to:
+        v = _pd(complete_date_to)
+        if v: base = base.filter(CRMLead.complete_date <= (v.date() if hasattr(v, 'date') else v))
+
+    # Determine period start/end dates
+    start_dt = None
+    end_dt = None
+    if period_type == 'monthly':
+        try:
+            dt = datetime.strptime(label, "%b %Y")
+            start_dt = _date(dt.year, dt.month, 1)
+            import calendar
+            last_day = calendar.monthrange(dt.year, dt.month)[1]
+            end_dt = _date(dt.year, dt.month, last_day)
+        except Exception:
+            return {'success': False, 'detail': 'Invalid monthly label format'}
+    elif period_type == 'weekly':
+        _today_dt = datetime.combine(_date.today(), datetime.min.time())
+        _week_start = _today_dt - _td(days=_today_dt.weekday())
+        for _wk in range(12):
+            _ws = _week_start - _td(weeks=_wk)
+            lbl = f"W{12-_wk} ({_ws.strftime('%d %b')})"
+            lbl_alt = f"W{12-_wk} ({_ws.strftime('%-d %b')})"
+            if label == lbl or label == lbl_alt:
+                start_dt = _ws.date()
+                end_dt = start_dt + _td(days=6)
+                break
+        if not start_dt:
+            return {'success': False, 'detail': 'Invalid weekly label format'}
+
+    # Date bucketing and status conditions
+    _trend_date_expr = _sa_func.coalesce(CRMLead.submit_date, _sa_cast(CRMLead.created_at, _sa_Date))
+    _won_ok = _sa_and(
+        CRMLead.status.in_(POST_WON),
+        _sa_or(CRMLead.solar_pipeline_status.is_(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_WON_PS))
+    )
+    from sqlalchemy import text as _ex_text
+    _etc_done_sq = _ex_text(
+        "EXISTS (SELECT 1 FROM etc_students s "
+        "WHERE s.crm_lead_id = crm_leads.id "
+        "AND s.training_completed_date IS NOT NULL "
+        "AND s.is_active = TRUE)"
+    )
+    _completed_cond = _sa_or(
+        CRMLead.solar_pipeline_status == 'completed',
+        CRMLead.ev_b2b_stage == 'completed',
+        _sa_and(CRMLead.status.in_(POST_WON), CRMLead.solar_pipeline_status.is_(None), CRMLead.ev_b2b_stage.is_(None)),
+        _etc_done_sq
+    )
+
+    if metric == 'won':
+        _won_dt_expr = _sa_func.coalesce(
+            CRMLead.submit_date,
+            _sa_cast(CRMLead.actual_close_date, _sa_Date),
+            _trend_date_expr
+        )
+        base = base.filter(_won_ok, _won_dt_expr >= start_dt, _won_dt_expr <= end_dt)
+    elif metric == 'installed':
+        base = base.filter(CRMLead.installation_date.isnot(None), CRMLead.installation_date >= start_dt, CRMLead.installation_date <= end_dt)
+    elif metric == 'completed':
+        _comp_dt_expr = _sa_func.coalesce(CRMLead.complete_date, _trend_date_expr)
+        base = base.filter(_completed_cond, _comp_dt_expr >= start_dt, _comp_dt_expr <= end_dt)
+    else:
+        # Default trend date bucketing
+        base = base.filter(_trend_date_expr >= start_dt, _trend_date_expr <= end_dt)
+        if metric == 'submitted':
+            base = base.filter(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(['cancelled', 'not_interested']))
+        elif metric == 'pipeline':
+            base = base.filter(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_PIPE_PS))
+        elif metric == 'at_bank':
+            base = base.filter(CRMLead.solar_pipeline_status == 'pending_with_bank')
+        elif metric == 'eb_change':
+            base = base.filter(CRMLead.solar_pipeline_status == 'electricity_bill_change')
+        elif metric == 'in_progress':
+            base = base.filter(CRMLead.solar_pipeline_status.in_(['installation_pending', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending']))
+        elif metric == 'inst_pending':
+            base = base.filter(CRMLead.solar_pipeline_status == 'installation_pending')
+        elif metric == 'bal_pending':
+            base = base.filter(CRMLead.solar_pipeline_status == 'balance_pending')
+
+    total = base.count()
+    _leads = base.order_by(CRMLead.created_at.desc()).limit(limit).all()
+
+    # Bulk enrich: category names
+    _cids2 = list({l.category_id for l in _leads if l.category_id})
+    _cmap = {}
+    if _cids2:
+        for c in db.query(_SC2).filter(_SC2.id.in_(_cids2)).all():
+            _cmap[c.id] = c.name
+
+    # Bulk enrich: solar brand names
+    from app.models.vgk_incentive_brands import VGKIncentiveBrand as _VIB
+    _bids = list({l.solar_brand_id for l in _leads if l.solar_brand_id})
+    _bmap = {}
+    if _bids:
+        for b in db.query(_VIB).filter(_VIB.id.in_(_bids)).all():
+            _bmap[b.id] = b.brand_name
+
+    # Bulk enrich: latest note per lead
+    _lids = [l.id for l in _leads]
+    _nmap = {}
+    if _lids:
+        _mnq = db.query(CRMLeadNote.lead_id, _sa_func.max(CRMLeadNote.id).label('mid')).filter(CRMLeadNote.lead_id.in_(_lids)).group_by(CRMLeadNote.lead_id).subquery()
+        for n in db.query(CRMLeadNote).join(_mnq, CRMLeadNote.id == _mnq.c.mid).all():
+            _nmap[n.lead_id] = {
+                'note': n.note,
+                'by': n.created_by_id or '',
+                'at': n.created_at.isoformat() if n.created_at else None,
+            }
+
+    # Bulk enrich user names for ground support
+    _uids = list({l.mnr_handler_id for l in _leads if l.mnr_handler_id})
+    _unmap = {}
+    if _uids:
+        for u in db.query(_User).filter(_User.id.in_(_uids)).all():
+            _unmap[u.id] = u.name or u.id
+
+    # Bulk enrich: earliest transaction date per lead (DC-FIRST-PMT-003)
+    _txmap = {}
+    if _lids:
+        from app.models.crm import CRMLeadTransaction as _CLT
+        _txs = db.query(_CLT.lead_id, _sa_func.min(_CLT.transaction_date).label('min_date')).filter(
+            _CLT.lead_id.in_(_lids),
+            _CLT.transaction_date.isnot(None)
+        ).group_by(_CLT.lead_id).all()
+        for t in _txs:
+            if t.min_date:
+                _txmap[t.lead_id] = t.min_date.date() if hasattr(t.min_date, 'date') else t.min_date
+
+    def _mask(ph):
+        if not ph:
+            return None
+        d = ''.join(c for c in str(ph) if c.isdigit())
+        return (d[:2] + '×' * (len(d) - 4) + d[-2:]) if len(d) >= 5 else ('×' * len(str(ph)))
+
+    return {
+        'success': True,
+        'total': total,
+        'data': [{
+            'id': l.id,
+            'company_id': l.company_id,
+            'name': l.name or '—',
+            'phone': _mask(l.phone),
+            'phone_raw': l.phone,
+            'created_at': l.created_at.isoformat() if l.created_at else None,
+            'submit_date': l.submit_date.isoformat() if l.submit_date else None,
+            'first_payment_received_date': (l.first_payment_received_date or _txmap.get(l.id)).isoformat() if (l.first_payment_received_date or _txmap.get(l.id)) else None,
+            'installation_date': l.installation_date.isoformat() if l.installation_date else None,
+            'source': l.source or '—',
+            'ground_source': l.source_ref_name or '—',
+            'ground_support': _unmap.get(l.mnr_handler_id, l.mnr_handler_id) if l.mnr_handler_id else '—',
+            'status': l.status or '—',
+            'solar_pipeline_status': l.solar_pipeline_status,
+            'category_name': _cmap.get(l.category_id) if l.category_id else None,
+            'loan_bank': l.loan_bank or None,
+            'bank_branch': l.bank_branch or None,
+            'brand_name': _bmap.get(l.solar_brand_id) if l.solar_brand_id else None,
+            'deal_value_total': float(l.deal_value_total or 0),
+            'deal_value_received': float(l.deal_value_received or 0),
+            'balance_pending': float(l.deal_value_balance or 0),
             'latest_note': _nmap.get(l.id),
         } for l in _leads],
     }
@@ -6955,6 +7410,19 @@ def get_lead(
             lead_dict['can_change_owner'] = False
             lead_dict['owner_change_reason'] = 'error'
         
+        # Coalesce first_payment_received_date with earliest transaction date if missing
+        try:
+            if not lead_dict.get('first_payment_received_date'):
+                from app.models.crm import CRMLeadTransaction as _CLT
+                _min_tx = db.query(_func.min(_CLT.transaction_date)).filter(
+                    _CLT.lead_id == lead_id,
+                    _CLT.transaction_date.isnot(None)
+                ).scalar()
+                if _min_tx:
+                    lead_dict['first_payment_received_date'] = _min_tx.isoformat() if hasattr(_min_tx, 'isoformat') else str(_min_tx)
+        except Exception:
+            pass
+
         return {
             'success': True,
             'data': lead_dict
@@ -7450,7 +7918,7 @@ def update_lead(
             lead.lost_at = None
     # DC-TEAM-ASSIGN-001 (Jun 2026): stamp actual_close_date when status→completed
     if 'status' in update_data and update_data['status'] == 'completed' and not lead.actual_close_date:
-        update_data['actual_close_date'] = get_indian_time()
+        lead.actual_close_date = get_indian_time()
 
     lead.updated_at = get_indian_time()
     lead.last_contact_date = lead.updated_at
@@ -7578,6 +8046,8 @@ def update_lead(
         'team_senior_partner_id', 'team_extended_partner_id', 'team_core_partner_id',
         'associated_partner_id', 'solar_brand_id',
         'solar_pipeline_status',   # DC-SPS-RETRIGGER-001 (Jul 2026): sps→completed via inline cell must generate income
+        'status', 'deal_value_received', 'actual_close_date',
+        'submit_date', 'cibil_score', 'dvr_amount',
     }
     _retrigger_hit = _RETRIGGER_FIELDS & set(update_data.keys())
     _sps_now = (getattr(lead, 'solar_pipeline_status', '') or '').lower()
@@ -7600,7 +8070,7 @@ def update_lead(
             )
             # DC-ADV-COMPLETION-ADJ-001 (Jul 2026): At sps→completed, also deduct any
             # released VSCA advance from the L1 COMMISSION DRAFT (mirrors DC-TEAM-ASSIGN-001).
-            if _tc > 0 and _sps_now == 'completed':
+            if _tc > 0 and _sps_now in ('subsidy_pending', 'completed'):
                 try:
                     from app.services.vgk_solar_advance import apply_adjustment_at_completion
                     _l1e_tr = db.execute(
@@ -11178,6 +11648,7 @@ async def get_unified_my_leads(
     target_user_id: Optional[str] = Query(None, description="DC Protocol: Staff leadership (hierarchy>=100) can view any MNR member's leads by their ID"),
     status: Optional[str] = None,
     priority: Optional[str] = None,
+    category: Optional[str] = Query(None),
     category_id: Optional[int] = None,
     search: Optional[str] = None,
     sort_by: Optional[str] = Query(None, description="Sort column: created_at, updated_at, next_followup_date, deal_value_total, deal_value_received"),
@@ -11521,8 +11992,37 @@ async def get_unified_my_leads(
             query = query.filter(CRMLead.status == status)
     if priority:
         query = query.filter(CRMLead.priority == priority)
-    if category_id:
-        query = query.filter(CRMLead.category_id == category_id)
+    # DC Protocol (Jul 2026 Task 11): Category filter — dual-match logic for both string name and integer ID.
+    if category or category_id is not None:
+        _cat_ids = []
+        if category_id is not None:
+            _cat_ids.append(category_id)
+        if category:
+            if isinstance(category, int) or (isinstance(category, str) and category.isdigit()):
+                _cat_ids.append(int(category))
+            else:
+                _matched_cats = db.query(SignupCategory.id).filter(
+                    or_(
+                        SignupCategory.name.ilike(category),
+                        SignupCategory.name.ilike(f"%{category}%"),
+                        SignupCategory.code.ilike(category)
+                    )
+                ).all()
+                _cat_ids.extend([r.id for r in _matched_cats])
+
+        _cat_ids = list(set(_cat_ids))
+        if _cat_ids:
+            _deal_lead_sq = (
+                db.query(CRMLeadDeal.lead_id)
+                .filter(CRMLeadDeal.revenue_category_id.in_(_cat_ids))
+                .scalar_subquery()
+            )
+            query = query.filter(or_(
+                CRMLead.category_id.in_(_cat_ids),
+                CRMLead.id.in_(_deal_lead_sq)
+            ))
+        else:
+            query = query.filter(CRMLead.id == -1)
     if search:
         _st = f'%{search}%'
         _sc = [

@@ -1701,14 +1701,19 @@ function switchTab(key) {
       <th><input type="checkbox" id="selectAllChk" onchange="toggleSelectAll(this)" title="Select All" style="cursor:pointer"></th>
       <th></th>
       <th class="sortable" onclick="sortByCol('id')">ID<span class="sort-icon"></span></th>
+      <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
+      <th class="sortable" onclick="sortByCol('phone')">Phone<span class="sort-icon"></span></th>
+      <th>Stage</th>
+      <th class="sortable" onclick="sortByCol('loan_bank')">Bank<span class="sort-icon"></span></th>
+      <th>Branch</th>
+      <th class="sortable" onclick="sortByCol('submit_date')" title="Sort by Submit Date">Submitted Date<span class="sort-icon"></span></th>
+      <th class="sortable" onclick="sortByCol('installation_date')">Install Date<span class="sort-icon"></span></th>
+      <th title="Total deal value minus received amount">Balance Pending</th>
+      <th title="Locked at completion — used for all payout/incentive calculations" style="white-space:nowrap">Commission Status &#10003;</th>
       <th class="sortable" onclick="sortByCol('application_no')">App No<span class="sort-icon"></span></th>
       <th class="sortable" onclick="sortByCol('accepted_date')">Accepted<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('name')">Name<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('phone')">Mobile<span class="sort-icon"></span></th>
       <th class="sortable" onclick="sortByCol('status')">Status<span class="sort-icon"></span></th>
-      <th>Stage</th>
       <th class="sortable" onclick="sortByCol('solar_pipeline_status_updated_at')" title="Sort by when Stage was last changed">Stage Date<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('submit_date')" title="Sort by Submit Date">Submit Date<span class="sort-icon"></span></th>
       <th class="sortable" id="daysColTh" onclick="sortByCol('_days')" title="Days since Submit Date — or Days in current Stage when a Stage filter is active. Click to sort.">Days<span class="sort-icon"></span></th>
       <th class="sortable" onclick="sortByCol('complete_date')" title="Sort by Complete Date">Complete Date<span class="sort-icon"></span></th>
       <th title="Panel serial numbers (up to 15) + brand, make, warranty">Panel Nos</th>
@@ -1726,9 +1731,7 @@ function switchTab(key) {
       <th>Tech Staff 1</th>
       <th>Tech Staff 2</th>
       <th class="sortable" onclick="sortByCol('pincode')">Pincode<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('loan_bank')">Loan Bank<span class="sort-icon"></span></th>
       <th>Bank IFSC</th>
-      <th>Branch</th>
       <th>Vendor</th>
       <th>Vendor Status</th>
       <th>Bank Entry?</th>
@@ -1742,11 +1745,9 @@ function switchTab(key) {
       <th>Docs</th>
       <th title="Uploaded / Total Required">Doc Count</th>
       <th class="sortable" onclick="sortByCol('material_reach_date')">Material Dt<span class="sort-icon"></span></th>
-      <th class="sortable" onclick="sortByCol('installation_date')">Install Dt<span class="sort-icon"></span></th>
       <th class="sortable" onclick="sortByCol('existing_association')">Association<span class="sort-icon"></span></th>
       <th class="sortable" onclick="sortByCol('deal_value_total')" title="Contracted deal value">Deal Total<span class="sort-icon"></span></th>
       <th class="sortable" onclick="sortByCol('deal_value_received')" title="Amount received from confirmed transactions">Received<span class="sort-icon"></span></th>
-      <th title="Locked at completion — used for all payout/incentive calculations" style="white-space:nowrap">Confirmed &#10003;</th>
       <th class="sortable" onclick="sortByCol('next_followup_date')">Next Followup<span class="sort-icon"></span></th>
       <th>VGK</th>
       <th>Actions</th>
@@ -2037,20 +2038,27 @@ function renderLeadsTable(leads) {
             const bg  = _dv<=7?'#f0fdf4':_dv<=30?'#fffbeb':_dv<=60?'#fff7ed':'#fef2f2';
             return `<td style="text-align:center;padding:3px 6px;white-space:nowrap" title="${_daysTip}"><span style="display:inline-block;min-width:32px;padding:2px 7px;border-radius:10px;background:${bg};color:${col};font-size:11px;font-weight:700">${_dv}d</span></td>`;
           })();
+      const _balPendVal = l.deal_value_balance || (dv - (l.deal_value_received||0));
+      const _balPendChip = _balPendVal > 0 ? `<span class="value-chip" style="background:#fee2e2;color:#b91c1c">₹${fmtVal(_balPendVal)}</span>` : '—';
       return `<tr class="lead-row" data-id="${l.id}">
         <td style="text-align:center"><input type="checkbox" class="lead-chk" data-id="${l.id}" onchange="onLeadCheckChange(this)" style="cursor:pointer"></td>
         <td><button class="btn-expand" id="exp_${l.id}" onclick="toggleExpand(${l.id})"><i class="fas fa-chevron-down"></i></button></td>
         <td><span style="font-family:monospace;font-size:10.5px;color:#1e3a5f;font-weight:700">#${l.id}</span></td>
-        <td class="ic" data-lid="${l.id}" data-field="application_no" data-type="text" data-val="${esc(l.application_no||'')}" style="font-family:monospace;font-size:10.5px;color:#d97706;font-weight:700">${esc(l.application_no||'—')}</td>
-        <td class="ic" data-lid="${l.id}" data-field="accepted_date" data-type="date" data-val="${l.accepted_date?l.accepted_date.slice(0,10):''}" style="font-size:10.5px">${l.accepted_date?fmtDateShort(l.accepted_date):'—'}</td>
         <td class="ic" data-lid="${l.id}" data-field="name" data-type="text" data-val="${esc(l.name||'')}" style="font-weight:600;color:#1f2937;max-width:130px;overflow:hidden;text-overflow:ellipsis">${esc(l.name||'—')}</td>
         <td>${phoneCell}</td>
-        <td class="ic" data-lid="${l.id}" data-field="status" data-type="status" data-val="${l.status||'new'}"><span class="status-badge s-${st}">${STATUS_LABELS[st]||st}</span></td>
         <td style="min-width:90px;padding:3px 4px">
           <div class="ic-sub" data-lid="${l.id}" data-field="solar_pipeline_status" data-type="pipeline" data-val="${l.solar_pipeline_status||''}" title="Click to edit Stage">${l.solar_pipeline_status?`<span class="pipeline-badge ps-${l.solar_pipeline_status}">${PIPELINE_LABELS[l.solar_pipeline_status]||l.solar_pipeline_status}</span>`:'<span style="color:#9ca3af;font-size:9.5px">— Stage</span>'}</div>
         </td>
-        <td id="stagedt_${l.id}" style="font-size:10px;color:#6b7280;white-space:nowrap">${l.solar_pipeline_status_updated_at?fmtDateShort(l.solar_pipeline_status_updated_at):'—'}</td>
+        <td class="ic" data-lid="${l.id}" data-field="loan_bank" data-type="text" data-val="${esc(l.loan_bank||'')}" style="font-size:10.5px;max-width:80px;overflow:hidden;text-overflow:ellipsis">${esc(l.loan_bank||'—')}</td>
+        <td style="font-size:10.5px;max-width:80px;overflow:hidden;text-overflow:ellipsis" title="${esc(l.bank_branch||'')}">${esc(l.bank_branch||'—')}</td>
         <td style="padding:3px 4px;min-width:110px"><input type="date" class="form-control" style="font-size:10.5px;padding:2px 5px;border:1px solid #e5e7eb;border-radius:4px;min-width:105px" value="${l.submit_date?l.submit_date.slice(0,10):''}" onchange="saveSubmitDate(${l.id},this.value)" title="Submit Date"></td>
+        <td class="ic" data-lid="${l.id}" data-field="installation_date" data-type="date" data-val="${l.installation_date?l.installation_date.slice(0,10):''}" style="font-size:10.5px">${l.installation_date?fmtDateShort(l.installation_date):'—'}</td>
+        <td style="font-size:11px">${_balPendChip}</td>
+        <td style="font-size:11px">${l.confirmed_final_value!=null?`<span class="value-chip" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d" title="Payout base locked at completion">&#128274; ₹${fmtVal(l.confirmed_final_value)}</span>`:'—'}</td>
+        <td class="ic" data-lid="${l.id}" data-field="application_no" data-type="text" data-val="${esc(l.application_no||'')}" style="font-family:monospace;font-size:10.5px;color:#d97706;font-weight:700">${esc(l.application_no||'—')}</td>
+        <td class="ic" data-lid="${l.id}" data-field="accepted_date" data-type="date" data-val="${l.accepted_date?l.accepted_date.slice(0,10):''}" style="font-size:10.5px">${l.accepted_date?fmtDateShort(l.accepted_date):'—'}</td>
+        <td class="ic" data-lid="${l.id}" data-field="status" data-type="status" data-val="${l.status||'new'}"><span class="status-badge s-${st}">${STATUS_LABELS[st]||st}</span></td>
+        <td id="stagedt_${l.id}" style="font-size:10px;color:#6b7280;white-space:nowrap">${l.solar_pipeline_status_updated_at?fmtDateShort(l.solar_pipeline_status_updated_at):'—'}</td>
         ${_daysCell}
         <td style="padding:3px 4px;min-width:110px"><input type="date" class="form-control" style="font-size:10.5px;padding:2px 5px;border:1px solid ${l.complete_date&&!['MR10025','MR10001'].includes(_viewerEmpCode)?'#d1d5db':'#e5e7eb'};border-radius:4px;min-width:105px;${l.complete_date&&!['MR10025','MR10001'].includes(_viewerEmpCode)?'background:#f9fafb;cursor:not-allowed;':''};" value="${l.complete_date?l.complete_date.slice(0,10):''}" ${l.complete_date&&!['MR10025','MR10001'].includes(_viewerEmpCode)?'disabled title="Locked — only Subash (MR10025) or VGK Mentor (MR10001) can modify"':'title="Complete Date"'} onchange="saveCompleteDate(${l.id},this.value)"></td>
         <td style="text-align:center;min-width:90px"><button onclick="openPanelSerialModal(${l.id})" style="padding:2px 7px;font-size:10px;border:1px solid #d1d5db;border-radius:5px;background:#f0fdf4;color:#065f46;cursor:pointer;font-weight:600" title="Add/edit panel serial numbers, brand, make, warranty"><i class="fas fa-solar-panel"></i> Panels</button></td>
@@ -2068,9 +2076,7 @@ function renderLeadsTable(leads) {
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="technical_staff1_id" data-type="handler_tech1" data-val="${l.technical_staff1_id||''}" data-name="${esc(l.technical_staff1_name||'')}">${handlerTech1}</td>
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="technical_id" data-type="handler_tech" data-val="${l.technical_id||''}" data-name="${esc(l.technical_name||'')}">${handlerTech}</td>
         <td class="ic" data-lid="${l.id}" data-field="pincode" data-type="text" data-val="${esc(l.pincode||'')}" style="font-size:10.5px">${l.pincode||'—'}</td>
-        <td class="ic" data-lid="${l.id}" data-field="loan_bank" data-type="text" data-val="${esc(l.loan_bank||'')}" style="font-size:10.5px;max-width:80px;overflow:hidden;text-overflow:ellipsis">${esc(l.loan_bank||'—')}</td>
         <td style="font-size:10.5px">${esc(l.ifsc_code||'—')}</td>
-        <td style="font-size:10.5px;max-width:80px;overflow:hidden;text-overflow:ellipsis" title="${esc(l.bank_branch||'')}">${esc(l.bank_branch||'—')}</td>
         <td class="ic" data-lid="${l.id}" data-field="vendor_id" data-type="vendor_select" data-val="${l.vendor_id||''}" style="cursor:pointer;min-width:90px">${l.partner_name?`<span style="font-size:10.5px;color:#1e3a5f;font-weight:600">${esc(l.partner_name)}</span>${l.vendor_code?`<br><span style="font-size:9px;color:#6b7280">${esc(l.vendor_code)}</span>`:''}` :'<span style="color:#9ca3af;font-size:9.5px;cursor:pointer">— Vendor</span>'}</td>
         <td style="min-width:90px">${_vendorStatusBadge(_computeVendorStatus(l.status||'',l.solar_pipeline_status||''))}</td>
         <td style="text-align:center;font-size:11px">${l.bank_entry_updated===true?'✅ Yes':l.bank_entry_updated===false?'❌ No':'—'}</td>
@@ -2084,11 +2090,9 @@ function renderLeadsTable(leads) {
         <td style="text-align:center">${docB}</td>
         <td style="text-align:center;font-size:11px;font-weight:700">${(()=>{const u=l.solar_docs_uploaded||0;const t=SDOC_TOTAL_REQUIRED;const c=u>=t?'#16a34a':u>0?'#d97706':'#9ca3af';return `<span style="color:${c}" title="${u} uploaded of ${t} required">${u}/${t}</span>`;})()}</td>
         <td class="ic" data-lid="${l.id}" data-field="material_reach_date" data-type="date" data-val="${l.material_reach_date?l.material_reach_date.slice(0,10):''}" style="font-size:10.5px">${l.material_reach_date?fmtDateShort(l.material_reach_date):'—'}</td>
-        <td class="ic" data-lid="${l.id}" data-field="installation_date" data-type="date" data-val="${l.installation_date?l.installation_date.slice(0,10):''}" style="font-size:10.5px">${l.installation_date?fmtDateShort(l.installation_date):'—'}</td>
         <td>${assocB}</td>
         <td>${dv>0?`<span class="value-chip">₹${fmtVal(dv)}</span>`:'—'}</td>
         <td style="font-size:11px">${l.deal_value_received>0?`<span class="value-chip" style="background:#d1fae5;color:#065f46">₹${fmtVal(l.deal_value_received)}</span>`:'—'}</td>
-        <td style="font-size:11px">${l.confirmed_final_value!=null?`<span class="value-chip" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d" title="Payout base locked at completion">&#128274; ₹${fmtVal(l.confirmed_final_value)}</span>`:'—'}</td>
         <td class="ic" data-lid="${l.id}" data-field="next_followup_date" data-type="date" data-val="${l.next_followup_date?l.next_followup_date.slice(0,10):''}" style="font-size:10.5px${isOverdue?';color:#dc2626;font-weight:700':''}">${nf}</td>
         <td style="text-align:center;min-width:100px">${_vgkCell(l, l.company_id, _sdName)}</td>
         <td><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button></td>

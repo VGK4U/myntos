@@ -1088,15 +1088,15 @@ def apply_adjustment_at_completion(db: Session, lead_id: int, cash_income_entry_
     Status → ADJUSTED.
     """
     try:
-        adv = db.execute(text("""
-            SELECT id, partner_id, advance_amount, status, entry_number
+        advs = db.execute(text("""
+            SELECT id, partner_id, advance_amount, status, entry_number, kind
             FROM vgk_solar_cibil_advances
-            WHERE lead_id = :lid AND level = 1 AND kind = 'ADVANCE'
+            WHERE lead_id = :lid AND level = 1 AND kind IN ('ADVANCE', 'DVR_ADVANCE') AND status = 'RELEASED'
             FOR UPDATE
-        """), {'lid': lead_id}).fetchone()
+        """), {'lid': lead_id}).fetchall()
 
-        if not adv or adv.status != 'RELEASED':
-            return {'adjusted': False, 'reason': 'No released L1 advance to adjust'}
+        if not advs:
+            return {'adjusted': False, 'reason': 'No released L1 advance (CIBIL or DVR) to adjust'}
 
         entry = db.execute(text("""
             SELECT id, commission_amount FROM vgk_cash_income_entries
@@ -1107,8 +1107,8 @@ def apply_adjustment_at_completion(db: Session, lead_id: int, cash_income_entry_
             return {'adjusted': False, 'reason': 'Cash income entry not found'}
 
         original_commission = Decimal(str(entry.commission_amount or 0))
-        advance_amt = Decimal(str(adv.advance_amount))
-        adjusted_commission = max(Decimal('0'), original_commission - advance_amt)
+        total_advance_amt = sum(Decimal(str(a.advance_amount or 0)) for a in advs)
+        adjusted_commission = max(Decimal('0'), original_commission - total_advance_amt)
         actual_adjustment = original_commission - adjusted_commission
 
         now = _get_ist()
@@ -1118,20 +1118,21 @@ def apply_adjustment_at_completion(db: Session, lead_id: int, cash_income_entry_
             WHERE id = :eid
         """), {'new_amt': float(adjusted_commission), 'now': now.replace(tzinfo=None), 'eid': cash_income_entry_id})
 
-        db.execute(text("""
-            UPDATE vgk_solar_cibil_advances SET
-                status = 'ADJUSTED',
-                adjustment_amount = :adj,
-                adjustment_entry_id = :eid,
-                adjusted_at = :now,
-                updated_at  = :now
-            WHERE id = :aid
-        """), {
-            'adj': float(actual_adjustment),
-            'eid': cash_income_entry_id,
-            'now': now.replace(tzinfo=None),
-            'aid': adv.id,
-        })
+        for adv in advs:
+            db.execute(text("""
+                UPDATE vgk_solar_cibil_advances SET
+                    status = 'ADJUSTED',
+                    adjustment_amount = :adj,
+                    adjustment_entry_id = :eid,
+                    adjusted_at = :now,
+                    updated_at  = :now
+                WHERE id = :aid
+            """), {
+                'adj': float(adv.advance_amount or 0),
+                'eid': cash_income_entry_id,
+                'now': now.replace(tzinfo=None),
+                'aid': adv.id,
+            })
 
         db.commit()
         logger.info(

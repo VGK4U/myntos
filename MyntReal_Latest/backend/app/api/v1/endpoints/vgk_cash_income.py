@@ -782,20 +782,9 @@ def staff_wallet_summary(
 
 def _trigger_senior_comm(db: Session, entry: VGKCashIncomeEntry, staff_id: int):
     """
-    DC-SENIOR-COMM-001 (Jun 2026): When a Solar Advance (kind=ADVANCE) is Released,
-    create a SENIOR_COMM entry (₹500 gross / ₹450 net) for the direct reporting senior
-    and deduct ₹500 inline from the senior's current PENDING L2 COMMISSION entry.
-
-    WVV:
-      Write  — creates VGKCashIncomeEntry(kind=SENIOR_COMM) and/or mutates senior's L2 entry
-      Verify — only fires if partner has parent_partner_id
-      Validate — deducted amounts are floored at 0 (never go negative)
+    DC-SENIOR-COMM-001-REMOVED (Jul 2026): Auto-trigger removed entirely to prevent create-cancel loops.
     """
-    from app.services.vgk_cash_income import _get_ist
-
-    partner = db.query(OfficialPartner).filter(OfficialPartner.id == entry.partner_id).first()
-    if not partner or not getattr(partner, 'parent_partner_id', None):
-        return  # No direct reporting senior — skip
+    return
 
     senior_id = partner.parent_partner_id
     senior    = db.query(OfficialPartner).filter(OfficialPartner.id == senior_id).first()
@@ -942,7 +931,7 @@ def unified_list(
             q = q.filter(OfficialPartner.vgk_points_balance < VGKCashIncomeEntry.net_payout)
 
     total = q.count()
-    entries = q.order_by(VGKCashIncomeEntry.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
+    entries = q.order_by(VGKCashIncomeEntry.income_date.desc().nullslast(), VGKCashIncomeEntry.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
 
     is_super = is_super_skip_user(current_employee)
     _dept_raw = getattr(current_employee, 'department', '') or ''

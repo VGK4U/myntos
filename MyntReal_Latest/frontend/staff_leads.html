@@ -3622,6 +3622,13 @@
             
             const currentStatus = document.getElementById('leadStatus').value;
             
+            // Enforce lead category required field (Root Cause 3)
+            const categoryId = document.getElementById('leadCategory').value;
+            if (!categoryId) {
+                showToast('Please select a lead category', 'error');
+                return;
+            }
+
             // Validate deal value for Won status
             if (currentStatus === 'won') {
                 const dealTotal = parseFloat(document.getElementById('leadDealValueTotal').value) || 0;

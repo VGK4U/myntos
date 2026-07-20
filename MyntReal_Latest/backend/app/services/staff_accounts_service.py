@@ -3322,6 +3322,66 @@ class IncomeEntryService:
         db.commit()
         db.refresh(entry)
 
+        # DC-INCOME-DATE-CASCADE-001 / DC-INCOME-FIELD-CASCADE-001: Propagate date & field edits to CRM transaction, VGK cash income entries & ledgers
+        try:
+            if entry.crm_transaction_id:
+                from app.models.crm import CRMLeadTransaction as _CLT
+                _clt = db.query(_CLT).filter(_CLT.id == entry.crm_transaction_id).first()
+                if _clt:
+                    _eff_dt = entry.income_date or (entry.payment_date.date() if hasattr(entry.payment_date, 'date') else entry.payment_date)
+                    if _eff_dt:
+                        _clt.transaction_date = _eff_dt
+                    if entry.amount:
+                        _clt.amount = entry.amount
+                    if entry.payment_mode:
+                        _clt.payment_mode = entry.payment_mode
+                    _ref_val = getattr(entry, 'payment_reference', None) or entry.entry_number
+                    if _ref_val:
+                        _clt.reference_number = _ref_val
+                    if entry.narration:
+                        _clt.notes = entry.narration
+
+            if entry.income_date:
+                from sqlalchemy import text as _sa_text
+                _now_val = get_indian_time()
+                db.execute(
+                    _sa_text("UPDATE vgk_cash_income_entries SET income_date = :dt, updated_at = :now WHERE source_lead_id = :lid AND company_id = :cid AND status != 'CANCELLED'"),
+                    {"dt": entry.income_date, "lid": entry.lead_id, "cid": entry.company_id, "now": _now_val}
+                )
+                db.execute(
+                    _sa_text("UPDATE employee_fund_ledger SET transaction_date = :dt, updated_at = :now WHERE reference_id = :eid AND reference_type = 'INCOME_ENTRY'"),
+                    {"dt": entry.income_date, "eid": entry.id, "now": _now_val}
+                )
+                db.execute(
+                    _sa_text("UPDATE solar_vendor_ledger SET transaction_date = :dt WHERE income_entry_id = :eid"),
+                    {"dt": entry.income_date, "eid": entry.id}
+                )
+                db.execute(
+                    _sa_text("UPDATE party_ledger SET transaction_date = :dt, updated_at = :now WHERE reference_id = :eid AND reference_type = 'INCOME'"),
+                    {"dt": entry.income_date, "eid": str(entry.id), "now": _now_val}
+                )
+                db.execute(
+                    _sa_text("UPDATE account_ledger SET transaction_date = :dt, updated_at = :now WHERE reference_id = :eid AND reference_type = 'INCOME'"),
+                    {"dt": entry.income_date, "eid": str(entry.id), "now": _now_val}
+                )
+
+            # Re-evaluate lead first payment date
+            if entry.lead_id:
+                from app.models.crm import CRMLead as _Lead, CRMLeadTransaction as _Txn
+                from sqlalchemy import func as _sa_func
+                _min_dt = db.query(_sa_func.min(_Txn.transaction_date)).filter(
+                    _Txn.lead_id == entry.lead_id,
+                    _Txn.validation_status == 'validated'
+                ).scalar()
+                _lead_row = db.query(_Lead).filter(_Lead.id == entry.lead_id).first()
+                if _lead_row:
+                    _lead_row.first_payment_received_date = _min_dt
+
+            db.commit()
+        except Exception as _casc_err:
+            import traceback
+            traceback.print_exc()
+            db.rollback()
         # DC-SVL-BACKFILL-001: If solar_vendor_id was set/changed on a CONFIRMED entry via edit,
         # create the missing SVL RECEIVED row (the auto-post only runs on the CONFIRM transition,
         # not on subsequent edits).
@@ -3438,11 +3498,11 @@ class IncomeEntryService:
         
         valid_transitions = {
             'PENDING': ['CONFIRMED', 'ESTIMATED', 'EXCEPTION_TALLY', 'ADJUSTMENT'],
-            'CONFIRMED': ['EXCEPTION_TALLY', 'ADJUSTMENT', 'TALLY_DONE'],
+            'CONFIRMED': ['EXCEPTION_TALLY', 'ADJUSTMENT', 'TALLY_DONE', 'PENDING'],
             'ESTIMATED': ['CONFIRMED', 'PENDING'],
             'EXCEPTION_TALLY': ['CONFIRMED', 'ADJUSTMENT', 'TALLY_DONE', 'PENDING'],
             'ADJUSTMENT': ['CONFIRMED', 'TALLY_DONE', 'PENDING'],
-            'TALLY_DONE': ['EXCEPTION_TALLY', 'ADJUSTMENT']
+            'TALLY_DONE': ['EXCEPTION_TALLY', 'ADJUSTMENT', 'PENDING']
         }
 
         if new_status not in valid_transitions.get(current_status, []):
@@ -3753,13 +3813,19 @@ class IncomeEntryService:
                     f'[DC-DVR-ADV-IE-001] DVR advance hook failed for entry {entry.id}: {_dvr_ie_e}'
                 )
 
+            # DC-LEDGER-AUTO-POST: Auto-post to general ledgers on CONFIRMED
+            if not entry.ledger_updated:
+                LedgerPostingService.post_income_confirmed(db, entry, employee.id)
+
         elif new_status == 'ESTIMATED':
             # DC-ESTIMATIONS-001: mark as estimated, post soft stock deductions only
             entry.confirmation_type = 'ESTIMATED'
             IncomeEntryService._post_estimate_stock(db, entry, employee.id, is_reversal=False)
         elif new_status == 'PENDING':
-            if current_status == 'CONFIRMED':
+            # Revert posting if transitioning from confirmed statuses back to PENDING
+            if entry.ledger_updated or current_status in ('CONFIRMED', 'EXCEPTION_TALLY', 'ADJUSTMENT', 'TALLY_DONE'):
                 LedgerPostingService.post_income_confirmed(db, entry, employee.id, is_reversal=True)
+                entry.ledger_updated = False
                 entry.confirmation_type = None
                 entry.bank_account_id = None
             elif current_status == 'ESTIMATED':
@@ -3840,14 +3906,14 @@ class IncomeEntryService:
         DC_INCOME_DELETE_001: Restricted to VGK Mentor (vgk4u) and EA roles only.
         Preserves financial audit trail — data is never permanently removed.
         """
-        # DC_INCOME_DELETE_001: Only VGK Mentor and EA roles may delete income entries
+        emp_code = (employee.emp_code or '').strip().upper()
         role_code = ''
         if employee.role:
             role_code = (employee.role.role_code or '').lower().strip()
-        allowed_roles = {'vgk4u', 'ea', 'executive_assistant'}
-        if role_code not in allowed_roles:
+        allowed_roles = {'vgk4u', 'ea', 'executive_assistant', 'accounts', 'accounts_staff', 'accounts_manager'}
+        if emp_code != 'MR10001' and role_code not in allowed_roles:
             raise AccountsRBACError(
-                "Access denied. Only VGK Mentor and EA roles can delete income entries."
+                "Access denied. Only Accounts role, EA, VGK Mentor, or MR10001 can delete income entries."
             )
 
         entry = db.query(IncomeEntry).filter(
@@ -3878,6 +3944,34 @@ class IncomeEntryService:
         )
 
         return True
+
+    @staticmethod
+    def list_deleted_income_entries(
+        db: Session,
+        employee: StaffEmployee,
+        page: int = 1,
+        page_size: int = 20
+    ):
+        validate_accounts_access(employee)
+        query = db.query(IncomeEntry).filter(IncomeEntry.is_deleted == True)
+        total = query.count()
+        entries = query.order_by(IncomeEntry.deleted_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+        
+        from app.models.staff import StaffEmployee as SE
+        deleted_by_ids = list({e.deleted_by_id for e in entries if e.deleted_by_id})
+        staff_map = {}
+        if deleted_by_ids:
+            staffs = db.query(SE).filter(SE.id.in_(deleted_by_ids)).all()
+            staff_map = {s.id: {"name": s.full_name, "emp_code": s.emp_code} for s in staffs}
+            
+        result = []
+        for e in entries:
+            d = IncomeEntryResponse.model_validate(e).model_dump(mode='json')
+            d['deleted_by_name'] = staff_map.get(e.deleted_by_id, {}).get('name') if e.deleted_by_id else None
+            d['deleted_by_emp_code'] = staff_map.get(e.deleted_by_id, {}).get('emp_code') if e.deleted_by_id else None
+            result.append(d)
+            
+        return result, total
 
 
 # ==================== EXPENSE MAIN CATEGORY SERVICE (Staff SFMS Access) ====================
@@ -20994,16 +21088,17 @@ class JournalVoucherService:
 
     @staticmethod
     def cancel(db, employee, jv_id: int, cancel_reason: str = None):
-        """DC-JV-HARD-DELETE-001: Cancel = permanent deletion.
-        Audit log written first, then all ledger rows and the JV record are
-        hard-deleted. No reversal entries — the original entries simply cease to exist.
-        Returns a dict summary (not the deleted ORM object) for the response.
+        """DC-JV-SOFT-CANCEL-001: Cancel = soft cancellation.
+        Set status to CANCELLED, zero out linked ledger debit/credit amounts,
+        set source_status to CANCELLED, and recompute running balances of affected accounts/parties.
         """
         from app.models.staff_accounts import JournalVoucher as _JV, AccountLedger as _AL, PartyLedger as _PL
         validate_accounts_access(employee)
         jv = db.query(_JV).filter(_JV.id == jv_id).first()
         if not jv:
             raise HTTPException(status_code=404, detail='Journal voucher not found')
+        if jv.status == 'CANCELLED':
+            raise HTTPException(status_code=400, detail='Voucher is already cancelled')
 
         snapshot = {
             'voucher_number': jv.voucher_number,
@@ -21013,33 +21108,82 @@ class JournalVoucherService:
             'cr_account':     jv.cr_account_name,
             'amount':         float(jv.amount) if jv.amount is not None else None,
             'narration':      jv.narration,
-            'cancel_reason':  cancel_reason or 'Deleted by user',
+            'cancel_reason':  cancel_reason or 'Cancelled by user',
             'company_id':     jv.company_id,
         }
+
+        now = get_indian_time()
+        jv.status = 'CANCELLED'
+        jv.cancelled_by_id = employee.id
+        jv.cancelled_at = now
+        jv.cancel_reason = cancel_reason
 
         log_accounts_audit(
             db=db,
             employee_id=employee.id,
-            action='DELETE_JOURNAL_VOUCHER',
+            action='CANCEL_JOURNAL_VOUCHER',
             entity_type='JournalVoucher',
             entity_id=jv.id,
             old_values=snapshot,
-            new_values={'deleted': True},
-            description=f"Permanently deleted voucher {jv.voucher_number}: {cancel_reason or 'no reason'}",
+            new_values={'status': 'CANCELLED', 'cancel_reason': cancel_reason},
+            description=f"Soft cancelled voucher {jv.voucher_number}: {cancel_reason or 'no reason'}",
         )
 
-        db.query(_AL).filter(
+        al_rows = db.query(_AL).filter(
             _AL.reference_type == 'JOURNAL',
-            _AL.reference_id == jv.id,
-        ).delete(synchronize_session=False)
+            _AL.reference_id == str(jv.id),
+        ).all()
 
-        db.query(_PL).filter(
+        pl_rows = db.query(_PL).filter(
             _PL.reference_type == 'JOURNAL',
-            _PL.reference_id == jv.id,
-        ).delete(synchronize_session=False)
+            _PL.reference_id == str(jv.id),
+        ).all()
 
-        db.delete(jv)
+        affected_accounts = set()
+        affected_parties = set()
+
+        for al in al_rows:
+            affected_accounts.add((al.company_id, al.account_type, al.account_name))
+            al.source_status = 'CANCELLED'
+            al.debit_amount = Decimal('0')
+            al.credit_amount = Decimal('0')
+
+        for pl in pl_rows:
+            affected_parties.add((pl.party_type, pl.party_name))
+            pl.source_status = 'CANCELLED'
+            pl.debit_amount = Decimal('0')
+            pl.credit_amount = Decimal('0')
+
+        db.flush()
+
+        for pty_type, pty_name in affected_parties:
+            if not pty_name:
+                continue
+            all_pl = db.query(_PL).filter(
+                _PL.company_id == jv.company_id,
+                _PL.party_type == pty_type,
+                _PL.party_name == pty_name,
+            ).order_by(_PL.id).all()
+            running = Decimal('0')
+            for pl_row in all_pl:
+                running += (pl_row.debit_amount or Decimal('0')) - (pl_row.credit_amount or Decimal('0'))
+                pl_row.running_balance = running
+
+        for al_cid, al_atype, al_aname in affected_accounts:
+            if not al_aname:
+                continue
+            all_al = db.query(_AL).filter(
+                _AL.company_id == al_cid,
+                _AL.account_type == al_atype,
+                _AL.account_name == al_aname,
+            ).order_by(_AL.transaction_date.asc(), _AL.id.asc()).all()
+            al_bal = Decimal('0')
+            for al_e in all_al:
+                al_bal += Decimal(str(al_e.debit_amount or 0)) - Decimal(str(al_e.credit_amount or 0))
+                al_e.running_balance = al_bal
+
         db.commit()
+        db.refresh(jv)
         return snapshot
 
     @staticmethod
